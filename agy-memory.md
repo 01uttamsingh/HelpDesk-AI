@@ -24,11 +24,10 @@ This living document tracks project context, architectural decisions, tooling ru
 | **Client Routing** | **React Router (v7+)** | Client-side routing for dashboard and ticket views. |
 | **Backend** | **Node.js + Express + TypeScript** | REST API in `/server`, executed via `bun --watch src/index.ts`. |
 | **Authentication** | **Database Sessions** | `express-session` with `connect-pg-simple` backed by PostgreSQL. |
-| **Database** | **PostgreSQL 16 (with pgvector)** | Relational tables for users, tickets, messages, and vector embeddings for KB. |
+| **Database** | **PostgreSQL 18** | Local PostgreSQL on port 5433 (`helpdesk` database). |
 | **ORM** | **Prisma ORM (v6+)** | Type-safe queries and declarative migrations (`prisma/schema.prisma`). |
 | **AI / LLM** | **Google Gemini API** (`@google/genai`) | Classification, summaries, text embeddings, and autonomous replies. |
 | **Email Inbound/Outbound** | **SendGrid / Mailgun** | Inbound via webhooks, outbound via email API with email threading headers. |
-| **Infrastructure** | **Docker Compose** | PostgreSQL container orchestration (`docker-compose.yml`). |
 
 ---
 
@@ -129,6 +128,17 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Backend: `http://localhost:5000` (`http://localhost:5000/api/health`)
   - Frontend: `http://localhost:5173`
 
+### Milestone 4: Local PostgreSQL & Prisma Integration
+- Removed `docker-compose.yml` to keep the architecture simple without containerization.
+- Identified local PostgreSQL 18 running on port `5433`.
+- Created the dedicated database `helpdesk`.
+- Updated `server/.env` with connection string: `postgresql://postgres:postgres@localhost:5433/helpdesk?schema=public`.
+- Executed initial Prisma migration (`20260904092144_init`), creating tables for `users`, `session`, `categories`, `tickets`, `messages`, and `knowledge_base_items`.
+- Created `server/src/prisma.ts` singleton client.
+- Connected the Express app to the database and verified via `SELECT 1` in `GET /api/health`.
+- Created modern TypeScript configuration file `server/prisma.config.ts` using `@prisma/config` (validated by Prisma CLI).
+- Updated `client/src/App.tsx` to display real-time database connection status.
+
 ---
 
 ## 7. Current Repository Layout
@@ -136,7 +146,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ```text
 ├── client/                      # React + Vite + TypeScript (Bun)
 │   ├── src/
-│   │   ├── App.tsx              # Minimal starter component calling /api/health
+│   │   ├── App.tsx              # Starter component with live DB status
 │   │   ├── index.css            # Tailwind CSS v4 setup
 │   │   └── main.tsx             # Entry point
 │   ├── vite.config.ts           # Vite config with API proxy
@@ -144,15 +154,17 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │
 ├── server/                      # Express + TypeScript (Bun)
 │   ├── prisma/
+│   │   ├── migrations/          # Applied database migrations
 │   │   └── schema.prisma        # Prisma schema
 │   ├── src/
-│   │   └── index.ts             # Express server starter with /api/health
-│   ├── .env
+│   │   ├── prisma.ts            # Prisma client instance
+│   │   └── index.ts             # Express server connected to PostgreSQL
+│   ├── .env                     # Configured with local Postgres on port 5433
 │   ├── .env.example
+│   ├── prisma.config.ts         # Prisma CLI configuration
 │   ├── tsconfig.json
 │   └── package.json
 │
-├── docker-compose.yml           # PostgreSQL service
 ├── package.json                 # Root Bun workspaces configuration
 ├── .gitignore
 ├── README.md
