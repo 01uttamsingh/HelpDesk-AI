@@ -1,0 +1,15 @@
+{
+  "name": "ai-helpdesk",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "bun --cwd server dev",
+    "dev:client": "bun --cwd client dev",
+    "build:server": "bun --cwd server build",
+    "build:client": "bun --cwd client build"
+  }
+}
