@@ -1,5 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   LifeBuoy,
   Mail,
@@ -12,34 +15,52 @@ import {
 import { useSession } from "../context/AuthContext";
 import { signIn } from "../lib/auth-client";
 
+const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(1, "Password is required"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 export function LoginPage() {
   const navigate = useNavigate();
   const session = useSession();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
   // If already logged in, redirect to home page
   if (!session.isPending && session.data?.user) {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+  const onSubmit = async (values: LoginFormValues) => {
+    setServerError(null);
 
     try {
       const res = await signIn.email({
-        email: email.trim(),
-        password,
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
       });
 
       if (res.error) {
-        setError(res.error.message || "Invalid email or password. Please try again.");
+        setServerError(res.error.message || "Invalid email or password. Please try again.");
       } else {
         await session.refetch();
         navigate("/", { replace: true });
@@ -47,9 +68,7 @@ export function LoginPage() {
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "An unexpected error occurred. Please try again.";
-      setError(message);
-    } finally {
-      setLoading(false);
+      setServerError(message);
     }
   };
 
@@ -71,14 +90,14 @@ export function LoginPage() {
 
         {/* Card Form */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs">
-          {error && (
+          {serverError && (
             <div className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50/80 p-3 text-sm text-red-800">
               <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
-              <div className="flex-1 font-medium">{error}</div>
+              <div className="flex-1 font-medium">{serverError}</div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {/* Email Field */}
             <div className="space-y-1.5">
               <label
@@ -93,42 +112,47 @@ export function LoginPage() {
                 </div>
                 <input
                   id="email"
-                  name="email"
                   type="email"
                   autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register("email")}
                   placeholder="admin@example.com"
-                  className="block w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                  className={`block w-full rounded-lg border py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 transition-colors ${
+                    errors.email
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-slate-300 focus:border-blue-500 focus:ring-blue-500/20"
+                  }`}
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs text-red-600 text-left font-medium">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Password
-                </label>
-              </div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-slate-700 text-left"
+              >
+                Password
+              </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password")}
                   placeholder="••••••••"
-                  className="block w-full rounded-lg border border-slate-300 py-2 pl-9 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                  className={`block w-full rounded-lg border py-2 pl-9 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 transition-colors ${
+                    errors.password
+                      ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+                      : "border-slate-300 focus:border-blue-500 focus:ring-blue-500/20"
+                  }`}
                 />
                 <button
                   type="button"
@@ -144,15 +168,20 @@ export function LoginPage() {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-xs text-red-600 text-left font-medium">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={isSubmitting}
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 transition-colors cursor-pointer"
             >
-              {loading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Signing in...</span>

@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAuthMiddleware } from "better-auth/api";
 import prisma from "./prisma";
 
 // Ensure environment variables are loaded
@@ -32,6 +33,13 @@ export const auth = betterAuth({
     disableSignUp: true,
   },
   trustedOrigins,
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.body && typeof ctx.body.email === "string") {
+        ctx.body.email = ctx.body.email.trim().toLowerCase();
+      }
+    }),
+  },
 });
 
 export type Auth = typeof auth;

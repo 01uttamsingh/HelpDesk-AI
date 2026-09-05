@@ -161,15 +161,19 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - When unauthenticated: displays "Sign in" button.
   - Graceful sign-out handler that terminates the session and redirects to `/login`.
 - Built `LoginPage` component (`client/src/pages/LoginPage.tsx`):
-  - Standard email and password input fields with show/hide password toggle.
-  - Error alert for invalid credentials or network failures.
+  - Form state management and schema validation via `react-hook-form` and `zod` (`@hookform/resolvers/zod`).
+  - Standard email and password input fields with inline field validation errors and show/hide password toggle.
+  - Server error alert for invalid credentials or network failures.
   - Loading spinner and button disabling during submission.
   - Automatic redirect to home page (`/`) on successful authentication.
   - Auto-redirects already-authenticated users away from `/login`.
 - Updated `HomePage` (`client/src/pages/HomePage.tsx`) and `App.tsx`:
   - Configured automatic redirect from `/` to `/login` whenever the user is not authenticated.
   - Displays welcome greeting with user name and live infrastructure status when authenticated.
-- Verified end-to-end: session retrieval, invalid login rejection (401), valid login redirect (200), session persistence, unauthenticated root redirect, and session destruction on sign-out.
+- Configured email case-insensitivity normalization across stack:
+  - Added Better Auth `hooks.before` middleware in `server/src/auth.ts` lowercasing incoming `ctx.body.email`.
+  - Normalized email in `client/src/pages/LoginPage.tsx` on submit (`trim().toLowerCase()`).
+- Verified end-to-end: session retrieval, invalid login rejection (401), valid login redirect (200), uppercase/mixed-case email sign-in (`TEST@example.com`), session persistence, unauthenticated root redirect, and session destruction on sign-out.
 
 ---
 
