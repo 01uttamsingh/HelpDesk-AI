@@ -150,6 +150,27 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - Created database seed script `server/prisma/seed.ts` (executable via `bun run prisma:seed`) to populate the initial Admin user from `ADMIN_EMAIL` and `ADMIN_PASSWORD` env variables.
 - Verified end-to-end: verified signup restriction, admin seeding idempotency, admin signin, and DB session persistence.
 
+### Milestone 6: Frontend Authentication Flow (Login Page, Navbar, Session Management)
+- Installed `better-auth` in `/client` workspace.
+- Configured clean Better Auth client in `client/src/lib/auth-client.ts` using `better-auth/client`.
+- Implemented `AuthProvider` (`client/src/context/AuthProvider.tsx`) and `useSession` hook (`client/src/context/AuthContext.ts`) via native React 19 context.
+- Implemented `Navbar` component (`client/src/components/Navbar.tsx`):
+  - Displays brand identity with AI badge.
+  - Dynamically observes session state via `useSession()`.
+  - When authenticated: displays user avatar, user name, and responsive "Sign out" button.
+  - When unauthenticated: displays "Sign in" button.
+  - Graceful sign-out handler that terminates the session and redirects to `/login`.
+- Built `LoginPage` component (`client/src/pages/LoginPage.tsx`):
+  - Standard email and password input fields with show/hide password toggle.
+  - Error alert for invalid credentials or network failures.
+  - Loading spinner and button disabling during submission.
+  - Automatic redirect to home page (`/`) on successful authentication.
+  - Auto-redirects already-authenticated users away from `/login`.
+- Updated `HomePage` (`client/src/pages/HomePage.tsx`) and `App.tsx`:
+  - Configured automatic redirect from `/` to `/login` whenever the user is not authenticated.
+  - Displays welcome greeting with user name and live infrastructure status when authenticated.
+- Verified end-to-end: session retrieval, invalid login rejection (401), valid login redirect (200), session persistence, unauthenticated root redirect, and session destruction on sign-out.
+
 ---
 
 ## 7. Current Repository Layout
@@ -157,17 +178,30 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ```text
 ├── client/                      # React + Vite + TypeScript (Bun)
 │   ├── src/
-│   │   ├── App.tsx              # Starter component with live DB status
+│   │   ├── components/
+│   │   │   ├── Navbar.tsx       # Navigation bar with user info & sign out
+│   │   │   └── ProtectedRoute.tsx # Route protection with loading & login redirect
+│   │   ├── context/
+│   │   │   ├── AuthContext.ts   # Session context & useSession hook
+│   │   │   └── AuthProvider.tsx # Session provider fetching from DB
+│   │   ├── lib/
+│   │   │   └── auth-client.ts   # Better Auth client instance
+│   │   ├── pages/
+│   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
+│   │   │   └── LoginPage.tsx    # Sign-in form with validation & redirect
+│   │   ├── App.tsx              # Main App layout, ProtectedRoute & Router
 │   │   ├── index.css            # Tailwind CSS v4 setup
 │   │   └── main.tsx             # Entry point
-│   ├── vite.config.ts           # Vite config with API proxy
+│   ├── vite.config.ts           # Vite config with API proxy & dedupe
 │   └── package.json
 │
 ├── server/                      # Express + TypeScript (Bun)
 │   ├── prisma/
 │   │   ├── migrations/          # Applied database migrations
-│   │   └── schema.prisma        # Prisma schema
+│   │   ├── schema.prisma        # Prisma schema
+│   │   └── seed.ts              # Admin user seed script
 │   ├── src/
+│   │   ├── auth.ts              # Better Auth server configuration
 │   │   ├── prisma.ts            # Prisma client instance
 │   │   └── index.ts             # Express server connected to PostgreSQL
 │   ├── .env                     # Configured with local Postgres on port 5433
@@ -190,5 +224,5 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ## 8. Next Steps
 
 According to `implementation-plan.md`:
-* **Phase 2**: Authentication & User Management (Database sessions, password hashing, Admin & Agent roles, seed script).
+* **Phase 3**: Ticket Management & Ingestion (Prisma schema relations, CRUD endpoints, email webhook ingest).
 

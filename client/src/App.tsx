@@ -1,53 +1,40 @@
-import { useEffect, useState } from 'react'
-
-interface HealthResponse {
-  status: string
-  message: string
-  timestamp: string
-}
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthProvider";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Navbar } from "./components/Navbar";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
 
 export function App() {
-  const [healthMessage, setHealthMessage] = useState<string>('')
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Server responded with status: ${res.status}`)
-        }
-        return res.json()
-      })
-      .then((data: HealthResponse) => {
-        setHealthMessage(data.message)
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to fetch health check')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-900 font-sans">
-      <div className="text-center p-8 bg-white rounded-xl border border-slate-200 shadow-sm max-w-md w-full">
-        <h1 className="text-2xl font-bold text-slate-900">AI Helpdesk</h1>
-
-        <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200">
-          <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">
-            Backend API Status
-          </p>
-          {loading && <p className="text-sm text-slate-500">Checking API status...</p>}
-          {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
-          {healthMessage && (
-            <p className="text-sm font-medium text-emerald-600">{healthMessage}</p>
-          )}
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
+          <Navbar />
+          <main className="flex-1">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <span>AI Helpdesk &copy; {new Date().getFullYear()} &bull; Better Auth &amp; PostgreSQL</span>
+              <span className="text-slate-400">Phase 2: Authentication &amp; User Management</span>
+            </div>
+          </footer>
         </div>
-      </div>
-    </div>
-  )
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;

@@ -7,6 +7,17 @@ import prisma from './prisma'
 
 dotenv.config()
 
+// Prevent Bun event loop idle exit on Windows
+setInterval(() => {}, 1000 * 60 * 60)
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+})
+
 const app = express()
 const PORT = process.env.PORT || 5000
 
