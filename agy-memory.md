@@ -23,9 +23,9 @@ This living document tracks project context, architectural decisions, tooling ru
 | **Styling** | **Tailwind CSS v4** | Modern zero-config setup using `@tailwindcss/vite` and `@import "tailwindcss";`. |
 | **Client Routing** | **React Router (v7+)** | Client-side routing for dashboard and ticket views. |
 | **Backend** | **Node.js + Express + TypeScript** | REST API in `/server`, executed via `bun --watch src/index.ts`. |
-| **Authentication** | **Database Sessions** | `express-session` with `connect-pg-simple` backed by PostgreSQL. |
+| **Authentication** | **Database Sessions** | **Better Auth** (email/password, database sessions via Prisma adapter backed by PostgreSQL). |
 | **Database** | **PostgreSQL 18** | Local PostgreSQL on port 5433 (`helpdesk` database). |
-| **ORM** | **Prisma ORM (v6+)** | Type-safe queries and declarative migrations (`prisma/schema.prisma`). |
+| **ORM** | **Prisma ORM (v7+)** | Type-safe queries with driver adapters (`@prisma/adapter-pg`) and declarative migrations (`prisma.config.ts` & `prisma/schema.prisma`). |
 | **AI / LLM** | **Google Gemini API** (`@google/genai`) | Classification, summaries, text embeddings, and autonomous replies. |
 | **Email Inbound/Outbound** | **SendGrid / Mailgun** | Inbound via webhooks, outbound via email API with email threading headers. |
 
@@ -138,6 +138,15 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - Connected the Express app to the database and verified via `SELECT 1` in `GET /api/health`.
 - Created modern TypeScript configuration file `server/prisma.config.ts` using `@prisma/config` (validated by Prisma CLI).
 - Updated `client/src/App.tsx` to display real-time database connection status.
+
+### Milestone 5: Better Auth Integration (Email/Password & Database Sessions)
+- Replaced legacy session packages (`express-session`, `connect-pg-simple`, `bcrypt`) with `better-auth`.
+- Created `server/src/auth.ts` configured with `prismaAdapter(prisma, { provider: "postgresql" })` and `emailAndPassword: { enabled: true }`.
+- Mounted Better Auth handler `app.all('/api/auth/*', toNodeHandler(auth))` in `server/src/index.ts` before body parsers.
+- Defined Better Auth core models (`User`, `Session`, `Account`, `Verification`) in `server/prisma/schema.prisma`.
+- Created and executed migration `20260905160511_init_better_auth`, creating all tables and indices in PostgreSQL on port 5433.
+- Configured `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` in `server/.env` and `server/.env.example`.
+- Verified end-to-end: verified signup, signin, DB session persistence, and `GET /api/auth/ok`.
 
 ---
 

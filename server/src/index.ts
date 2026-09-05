@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import { toNodeHandler } from 'better-auth/node'
+import { auth } from './auth'
 import prisma from './prisma'
 
 dotenv.config()
@@ -12,6 +14,10 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }))
+
+// Mount Better Auth handler before body-parsing middleware
+app.all('/api/auth/*', toNodeHandler(auth))
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
