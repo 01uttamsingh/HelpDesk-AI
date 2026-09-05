@@ -146,7 +146,9 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - Defined Better Auth core models (`User`, `Session`, `Account`, `Verification`) in `server/prisma/schema.prisma`.
 - Created and executed migration `20260905160511_init_better_auth`, creating all tables and indices in PostgreSQL on port 5433.
 - Configured `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` in `server/.env` and `server/.env.example`.
-- Verified end-to-end: verified signup, signin, DB session persistence, and `GET /api/auth/ok`.
+- Configured `Role` enum (`ADMIN`, `AGENT`) on `User` model with migration `20260905164214_add_role_to_user`.
+- Created database seed script `server/prisma/seed.ts` (executable via `bun run prisma:seed`) to populate the initial Admin user from `ADMIN_EMAIL` and `ADMIN_PASSWORD` env variables.
+- Verified end-to-end: verified signup restriction, admin seeding idempotency, admin signin, and DB session persistence.
 
 ---
 
