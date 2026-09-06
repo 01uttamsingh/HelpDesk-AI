@@ -1,23 +1,15 @@
-import dotenv from "dotenv";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createAuthMiddleware } from "better-auth/api";
 import prisma from "./prisma";
-
-// Ensure environment variables are loaded
-dotenv.config();
-
-const trustedOrigins = (process.env.TRUSTED_ORIGINS || process.env.CLIENT_URL || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+import { env, getTrustedOrigins } from "./config/env";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  secret: process.env.BETTER_AUTH_SECRET || process.env.SESSION_SECRET || "dev-session-secret-change-in-production-12345",
-  baseURL: process.env.BETTER_AUTH_URL || `http://localhost:${process.env.PORT || 5000}`,
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
   user: {
     additionalFields: {
       role: {
@@ -32,7 +24,18 @@ export const auth = betterAuth({
     enabled: true,
     disableSignUp: true,
   },
-  trustedOrigins,
+  trustedOrigins: getTrustedOrigins(),
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
+    },
+  },
+  rateLimit: {
+    enabled: true,
+    window: 60, // 60-second window
+    max: 10,    // 10 attempts per minute
+    storage: "memory",
+  },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.body && typeof ctx.body.email === "string") {

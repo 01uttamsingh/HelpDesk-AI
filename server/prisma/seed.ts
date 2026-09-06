@@ -6,7 +6,7 @@ import prisma from "../src/prisma";
 dotenv.config();
 
 async function main() {
-  const email = process.env.ADMIN_EMAIL || "test@example.com";
+  const email = (process.env.ADMIN_EMAIL || "test@example.com").trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD || "uvdb1357";
   const name = process.env.ADMIN_NAME || "Admin";
 

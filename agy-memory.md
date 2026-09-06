@@ -207,7 +207,20 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - Created `AdminRoute` wrapper (`client/src/components/AdminRoute.tsx`) restricting access to users with `role: "ADMIN"`.
 - Registered `/users` route in `client/src/App.tsx` guarded by `AdminRoute`.
 - Added conditional "Users" link in `Navbar` (`client/src/components/Navbar.tsx`) displayed only for `ADMIN` users.
+- Seeded `AGENT` role test user in PostgreSQL database `helpdesk` (`agent@example.com` / `uvdb1357`).
+- Configured dedicated `security-reviewer` subagent (`.agents/agents/security-reviewer/agent.md`) specialized for full-stack threat modeling (Gemini AI prompt injection, Better Auth RBAC, email webhook verification, and email loop prevention).
+- Confirmed full TypeScript compilation and production build (`bun run build`).
 
+### Milestone 9: Authentication & Authorization Security Hardening
+- **Server-Side RBAC Middleware**: Implemented `requireAuth` and `requireAdmin` in `server/src/middleware/auth.middleware.ts` with typed session extraction and role validation.
+- **Admin Route Protection**: Created `server/src/routes/admin.routes.ts` (`GET /api/admin/users`) guarded by `requireAdmin` (unauthenticated returns 401, `AGENT` returns 403, `ADMIN` returns 200).
+- **Session Token Sanitization**: Implemented `GET /api/me` returning user profile and session metadata while strictly omitting `session.token`.
+- **Startup Environment Validation**: Created `server/src/config/env.ts` using Zod to validate `BETTER_AUTH_SECRET` (>= 32 chars), `DATABASE_URL`, URLs, and ports at startup.
+- **Secret Hardening**: Removed hardcoded fallback secret `"dev-session-secret-change-in-production-12345"` from `server/src/auth.ts` and pruned `SESSION_SECRET` from `server/.env`.
+- **CORS Restriction**: Synchronized Express `cors` and Better Auth `trustedOrigins` using `getTrustedOrigins()`, rejecting unauthorized origins.
+- **Rate Limiting**: Configured rate limiting on `/api/auth/*` via Better Auth and `express-rate-limit` (10 requests/min).
+- **Database Seed Normalization**: Added `.toLowerCase()` email normalization in `server/prisma/seed.ts`.
+- **Verification**: Verified via end-to-end automated test suite across all user roles and endpoints.
 
 ---
 
