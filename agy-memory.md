@@ -30,6 +30,8 @@ This living document tracks project context, architectural decisions, tooling ru
 | **Database** | **PostgreSQL 18** | Local PostgreSQL on port 5433 (`helpdesk` database). |
 | **ORM** | **Prisma ORM (v7+)** | Type-safe queries with driver adapters (`@prisma/adapter-pg`) and declarative migrations (`prisma.config.ts` & `prisma/schema.prisma`). |
 | **AI / LLM** | **Google Gemini API** (`@google/genai`) | Classification, summaries, text embeddings, and autonomous replies. |
+| **Component Testing** | **React Testing Library + Vitest** | UI component tests with `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, and `jsdom`. |
+| **E2E Testing** | **Playwright** | End-to-end user journeys against isolated PostgreSQL test database (`helpdesk_test`). |
 | **Email Inbound/Outbound** | **SendGrid / Mailgun** | Inbound via webhooks, outbound via email API with email threading headers. |
 
 ---
@@ -51,6 +53,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **Incremental Development**: Build phase-by-phase according to `implementation-plan.md`.
 * **Runtime**: Always use `bun` commands (`bun install`, `bun dev`, `bun run ...`) rather than `npm` or `node`.
 * **Client Data Fetching (Axios & TanStack Query)**: Always use the preconfigured **Axios** client (`client/src/lib/api.ts`) and **TanStack Query** (`useQuery`, `useMutation`) for client-side API requests and server-state management. Never use raw `window.fetch()` for backend API calls.
+* **Component & Unit Testing (React Testing Library + Vitest)**: Write component tests alongside UI features using React Testing Library (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and the custom `renderWithQuery` wrapper ([`client/src/test/renderWithQuery.tsx`](client/src/test/renderWithQuery.tsx)). Ensure mock isolation via `vi.resetAllMocks()` and `vi.restoreAllMocks()` in `beforeEach`. Run via `bun run test:component` (or `bun run test:unit`).
 * **E2E Testing with `playwright-e2e` Subagent**: For all end-to-end testing tasks (authoring tests, running suites, diagnosing test failures), delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
 * **Memory Maintenance**: Keep this file (`agy-memory.md`) updated with all key milestones, architectural shifts, and completed tasks.
 
@@ -137,6 +140,32 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **Type-Safe Error Handling**:
   - Narrow caught errors using `axios.isAxiosError(err)` to access `err.response?.status` and backend error messages (`err.response?.data?.error`).
   - The shared `queryClient` (`client/src/lib/query-client.ts`) is configured to suppress automatic retries on `401 Unauthorized`, `403 Forbidden`, and `404 Not Found` errors.
+
+### 5.9 Component & Unit Testing Guidelines (React Testing Library + Vitest)
+* **Testing Stack & Environment**:
+  - **Runner**: **Vitest** configured in [`client/vitest.config.ts`](client/vitest.config.ts) with `environment: "jsdom"`, `@vitejs/plugin-react`, and workspace package deduplication.
+  - **DOM & Assertions**: **React Testing Library** (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and `@testing-library/user-event`.
+  - **Setup**: [`client/src/test/setup.ts`](client/src/test/setup.ts) automatically cleans up DOM state after each test.
+* **Test Isolation & QueryClient Wrapper**:
+  - Components using TanStack Query must be wrapped with [`renderWithQuery(ui)`](client/src/test/renderWithQuery.tsx).
+  - `renderWithQuery` injects a fresh `QueryClient` per test with `retry: false` and `gcTime: Infinity` to prevent slow timeouts and cross-test state leakage.
+* **Mocking Standards**:
+  - In `beforeEach`, always call both `vi.resetAllMocks()` and `vi.restoreAllMocks()`:
+    ```typescript
+    beforeEach(() => {
+      vi.resetAllMocks();
+      vi.restoreAllMocks();
+    });
+    ```
+  - Mock API calls by spying on the shared Axios client: `vi.spyOn(api, "get")`, `vi.spyOn(api, "post")`, etc.
+* **Query & Interaction Rules**:
+  - Query by accessibility semantics: `screen.getByRole`, `screen.getByLabelText`, `screen.getByPlaceholderText`, `screen.getByText`.
+  - Handle asynchronous state updates via `await screen.findBy*` or `await waitFor(() => { expect(...).toBeInTheDocument(); })`.
+  - Simulate user typing and clicks with `userEvent.setup()` rather than raw `fireEvent`.
+* **Execution Commands**:
+  - Single run (client workspace): `bun run --cwd client test:component` (or `bun run --cwd client test`).
+  - Interactive watch mode: `bun run --cwd client test:component:watch`.
+  - Single run from root: `bun run test:component` (or `bun run test:unit`).
 
 ---
 
@@ -349,12 +378,18 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
 │   │   │   ├── LoginPage.tsx    # Sign-in form styled with shadcn components
-│   │   │   └── UsersPage.tsx    # Admin user management dashboard
+│   │   │   ├── UsersPage.tsx    # Admin user management dashboard
+│   │   │   └── UsersPage.test.tsx # React Testing Library component tests
+│   │   ├── test/
+│   │   │   ├── renderWithQuery.tsx # Custom render wrapper providing QueryClientProvider
+│   │   │   ├── setup.ts         # Vitest DOM setup & cleanup
+│   │   │   └── test-utils.tsx   # Re-exports test helpers & utilities
 │   │   ├── App.tsx              # Main App layout, ProtectedRoute & Router
 │   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme
 │   │   └── main.tsx             # Entry point
 │   ├── components.json          # shadcn configuration (base-nova, neutral)
 │   ├── vite.config.ts           # Vite config with @ alias, configurable test port & proxy
+│   ├── vitest.config.ts         # Vitest config with JSDOM & React aliases
 │   ├── tsconfig.app.json        # TS app config with @/* path alias
 │   ├── tsconfig.json
 │   └── package.json
@@ -408,6 +443,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)
 ├── playwright.config.ts         # Playwright config (outputDir & reporter in e2e/)
+├── tsconfig.json                # Root TypeScript workspace configuration
 ├── .env.test                    # Root test environment variables
 ├── package.json                 # Root Bun workspaces configuration & test scripts
 ├── .gitignore                   # Configured with e2e/test-results & reports ignored

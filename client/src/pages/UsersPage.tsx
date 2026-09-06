@@ -81,13 +81,13 @@ export function UsersPage() {
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchesRole =
-        roleFilter === "ALL" || u.role.toUpperCase() === roleFilter;
+        roleFilter === "ALL" || u.role?.toUpperCase() === roleFilter;
 
       const q = searchQuery.trim().toLowerCase();
       const matchesSearch =
         !q ||
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q);
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q);
 
       return matchesRole && matchesSearch;
     });
@@ -95,8 +95,8 @@ export function UsersPage() {
 
   // Count summaries
   const totalCount = users.length;
-  const adminCount = users.filter((u) => u.role.toUpperCase() === "ADMIN").length;
-  const agentCount = users.filter((u) => u.role.toUpperCase() === "AGENT").length;
+  const adminCount = users.filter((u) => u.role?.toUpperCase() === "ADMIN").length;
+  const agentCount = users.filter((u) => u.role?.toUpperCase() === "AGENT").length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -318,7 +318,7 @@ export function UsersPage() {
                   const initial = user.name
                     ? user.name.charAt(0).toUpperCase()
                     : "U";
-                  const isAdmin = user.role.toUpperCase() === "ADMIN";
+                  const isAdmin = user.role?.toUpperCase() === "ADMIN";
                   const joinedDate = user.createdAt
                     ? new Date(user.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",

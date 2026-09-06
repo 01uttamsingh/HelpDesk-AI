@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { createAuthMiddleware } from "better-auth/api";
 import prisma from "./prisma";
 import { env, getTrustedOrigins } from "./config/env";
@@ -37,7 +37,7 @@ export const auth = betterAuth({
     storage: "memory",
   },
   hooks: {
-    before: createAuthMiddleware(async (ctx) => {
+    before: createAuthMiddleware(async (ctx: any) => {
       if (ctx.body && typeof ctx.body.email === "string") {
         ctx.body.email = ctx.body.email.trim().toLowerCase();
       }

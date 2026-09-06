@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { TEST_USERS, loginViaUI, signOutViaUI } from "../helpers/auth";
+import { TEST_USERS, signOutViaUI } from "../helpers/auth";
 
 test.describe("Authentication - Sign In & Validation", () => {
   test.beforeEach(async ({ page }) => {

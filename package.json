@@ -16,14 +16,23 @@
     "db:test:reset": "bun e2e/scripts/setup-test-db.ts --reset",
     "test:server": "bun run --cwd server test:server",
     "test:client": "bun run --cwd client test:client",
+    "test:unit": "bun run --cwd client test",
+    "test:component": "bun run --cwd client test:component",
     "test:e2e": "bun run db:test:setup && bunx playwright test",
     "test:e2e:ui": "bun run db:test:setup && bunx playwright test --ui",
     "test:e2e:headed": "bun run db:test:setup && bunx playwright test --headed"
   },
   "devDependencies": {
+    "@better-auth/core": "1.7.2",
+    "@better-auth/prisma-adapter": "1.7.2",
     "@playwright/test": "^1.63.0",
+    "@types/node": "^26.4.1",
     "@types/pg": "^8.23.1",
+    "better-auth": "1.7.2",
+    "better-call": "^1.4.0",
     "dotenv": "^17.4.2",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }
