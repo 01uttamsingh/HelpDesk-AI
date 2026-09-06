@@ -48,6 +48,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **No Premature Code / No Mock Fluff**: Do not introduce unnecessary example data, fake tables, or premature abstraction files. Keep files and implementations strictly focused on what the user asks for.
 * **Incremental Development**: Build phase-by-phase according to `implementation-plan.md`.
 * **Runtime**: Always use `bun` commands (`bun install`, `bun dev`, `bun run ...`) rather than `npm` or `node`.
+* **E2E Testing with `playwright-e2e` Subagent**: For all end-to-end testing tasks (authoring tests, running suites, diagnosing test failures), delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
 * **Memory Maintenance**: Keep this file (`agy-memory.md`) updated with all key milestones, architectural shifts, and completed tasks.
 
 ---
@@ -97,6 +98,29 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ### 5.6 Tooling & Commands
 - Strictly run commands with **`bun`** (`bun install`, `bun dev:server`, `bun dev:client`).
 - Query **Context7 MCP** for up-to-date documentation before adopting new APIs or libraries.
+
+### 5.7 E2E Testing Instructions (`playwright-e2e` Subagent)
+* **Dedicated Agent**: Delegate all E2E test creation, updates, execution, and debugging to the specialized `playwright-e2e` subagent ([`.agents/agents/playwright-e2e/agent.md`](.agents/agents/playwright-e2e/agent.md)).
+* **Strict Database Isolation**:
+  * All E2E tests must run against the dedicated test database `helpdesk_test` on PostgreSQL port `5433` (via backend port `5001` and frontend port `5174`).
+  * **NEVER** run tests against or mutate the development database `helpdesk` (ports `5000` / `5173`).
+* **Database Lifecycle Commands**:
+  * `bun run db:test:setup`: Ensures `helpdesk_test` exists, applies pending Prisma migrations, and seeds test data.
+  * `bun run db:test:reset`: Drops and recreates `helpdesk_test`, reapplies all migrations, and reseeds initial test data.
+* **Pre-Seeded Test Credentials**:
+  * **Admin User**: `test@example.com` / `uvdb1357` (Role: `ADMIN`).
+  * **Agent User**: `agent@example.com` / `uvdb1357` (Role: `AGENT`).
+* **Test Organization**:
+  * Place tests strictly in `/e2e` grouped by feature domain (e.g., `e2e/auth/login.spec.ts`, `e2e/rbac/admin-routes.spec.ts`, `e2e/tickets/`).
+* **Locator Guidelines**:
+  * Target UI elements using accessible semantic roles (`getByRole`, `getByLabel`, `getByText`, `getByRole('alert')`) built on shadcn/ui and Base UI primitives.
+  * Avoid brittle CSS selectors or generated Tailwind utility classes.
+* **Execution Commands**:
+  * `bun run test:e2e` (runs full test suite headlessly).
+  * `bun run test:e2e:ui` (opens interactive Playwright UI).
+  * `bun run test:e2e:headed` (runs tests with visible Chromium browser).
+  * `bunx playwright test e2e/<file>.spec.ts` (runs a specific test file).
+* **Rate Limiting**: Rate limiting is strictly scoped to `production` (`NODE_ENV === "production"`), ensuring test suites running under `NODE_ENV=test` never experience 429 request throttling.
 
 ---
 
@@ -226,14 +250,12 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - **Playwright Setup**: Installed `@playwright/test` (v1.63.0) and Playwright Chromium headless/shell binaries.
 - **Dedicated Test Database**: Provisioned isolated PostgreSQL test database `helpdesk_test` on port 5433, completely decoupled from development database `helpdesk`.
 - **Database Provisioning Automation**: Created `server/scripts/setup-test-db.ts` providing automatic database creation, migration deployment via Prisma CLI, idempotent admin seeding, and `--reset` support with safety guards.
-- **Environment Isolation**:
-  - Created `server/.env.test` and root `.env.test` targeting `helpdesk_test` on test ports (Backend: 5001, Frontend: 5174).
-  - Configured `server/src/config/env.ts`, `server/src/prisma.ts`, and `server/prisma/seed.ts` to load `.env.test` with `override: true` when `NODE_ENV === "test"`.
-  - Updated `client/vite.config.ts` to allow dynamic port and proxy target overrides via `PORT` / `VITE_PORT` and `API_URL` / `VITE_API_URL`.
-- **Production-Only Rate Limiting**: Scoped both Express `express-rate-limit` and Better Auth internal `rateLimit` to `NODE_ENV === "production"`.
+- **Environment Isolation**: Configured `server/.env.test` and root `.env.test` targeting `helpdesk_test` on test ports (Backend: 5001, Frontend: 5174) with `override: true` support under `NODE_ENV=test`.
+- **Production-Only Rate Limiting**: Scoped both Express `express-rate-limit` and Better Auth internal `rateLimit` strictly to `NODE_ENV === "production"`.
 - **Playwright Configuration**: Created `playwright.config.ts` with dual `webServer` orchestration (server on port 5001 with test db, client on port 5174), single worker for database isolation, and failure artifact captures.
 - **Package Scripts**: Added `db:test:setup`, `db:test:reset`, `test:server`, `test:client`, `test:e2e`, `test:e2e:ui`, and `test:e2e:headed` scripts in root `package.json`.
-- **Strict Compliance**: No test specs written per prompt instruction; verified clean configuration and dual webServer launch.
+- **E2E Testing Instructions & Agent**: All detailed instructions, testing conventions, user workflows, locators, and operating guidelines for end-to-end testing are codified in [`.agents/agents/playwright-e2e/agent.md`](.agents/agents/playwright-e2e/agent.md).
+- **Strict Compliance**: No test specs written per initial prompt instruction; verified clean configuration and dual webServer launch.
 
 ---
 
@@ -290,6 +312,16 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── prisma.config.ts         # Prisma CLI configuration
 │   ├── tsconfig.json
 │   └── package.json
+│
+├── .agents/
+│   ├── agents/
+│   │   ├── playwright-e2e/      # Specialized E2E testing subagent
+│   │   │   └── agent.md
+│   │   └── security-reviewer/   # Application security audit subagent
+│   │       └── agent.md
+│   └── skills/
+│       └── better-auth-best-practices/
+│           └── SKILL.md
 │
 ├── e2e/                         # Playwright E2E test specs (ready for tests)
 ├── playwright.config.ts         # Playwright test configuration & webServer orchestration
