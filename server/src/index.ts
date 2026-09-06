@@ -7,6 +7,7 @@ import prisma from "./prisma";
 import { env, getTrustedOrigins } from "./config/env";
 import { requireAuth, AuthenticatedRequest } from "./middleware/auth.middleware";
 import adminRoutes from "./routes/admin.routes";
+import userRoutes from "./routes/user.routes";
 
 // Prevent Bun event loop idle exit on Windows
 setInterval(() => {}, 1000 * 60 * 60);
@@ -107,8 +108,8 @@ app.get("/api/me", requireAuth, (req: AuthenticatedRequest, res: Response) => {
 
 // 1. Mount Admin Routes guarded by requireAdmin middleware
 app.use("/api/admin", adminRoutes);
-// Direct alias for /api/users pointing to admin user management
-app.use("/api/users", adminRoutes);
+// Standard REST endpoint for user management (Admin only)
+app.use("/api/users", userRoutes);
 
 // Centralized error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

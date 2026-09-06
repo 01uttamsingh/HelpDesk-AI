@@ -23,6 +23,8 @@ This living document tracks project context, architectural decisions, tooling ru
 | **Styling** | **Tailwind CSS v4** | Modern zero-config setup using `@tailwindcss/vite` and `@import "tailwindcss";`. |
 | **UI Components** | **shadcn/ui** | Accessible components with Base UI primitives, Lucide icons, Geist font, and default `neutral` theme using CSS variables. |
 | **Client Routing** | **React Router (v7+)** | Client-side routing for dashboard and ticket views. |
+| **Server State / Data Fetching** | **TanStack Query (v5)** | Asynchronous state management, intelligent caching, retry rules, and background synchronization. |
+| **HTTP Client** | **Axios (v1.x)** | Centralized client with session credential support and type-safe error handling. |
 | **Backend** | **Node.js + Express + TypeScript** | REST API in `/server`, executed via `bun --watch src/index.ts`. |
 | **Authentication** | **Database Sessions** | **Better Auth** (email/password, database sessions via Prisma adapter backed by PostgreSQL). |
 | **Database** | **PostgreSQL 18** | Local PostgreSQL on port 5433 (`helpdesk` database). |
@@ -48,6 +50,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **No Premature Code / No Mock Fluff**: Do not introduce unnecessary example data, fake tables, or premature abstraction files. Keep files and implementations strictly focused on what the user asks for.
 * **Incremental Development**: Build phase-by-phase according to `implementation-plan.md`.
 * **Runtime**: Always use `bun` commands (`bun install`, `bun dev`, `bun run ...`) rather than `npm` or `node`.
+* **Client Data Fetching (Axios & TanStack Query)**: Always use the preconfigured **Axios** client (`client/src/lib/api.ts`) and **TanStack Query** (`useQuery`, `useMutation`) for client-side API requests and server-state management. Never use raw `window.fetch()` for backend API calls.
 * **E2E Testing with `playwright-e2e` Subagent**: For all end-to-end testing tasks (authoring tests, running suites, diagnosing test failures), delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
 * **Memory Maintenance**: Keep this file (`agy-memory.md`) updated with all key milestones, architectural shifts, and completed tasks.
 
@@ -121,6 +124,19 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   * `bun run test:e2e:headed` (runs tests with visible Chromium browser).
   * `bunx playwright test e2e/<file>.spec.ts` (runs a specific test file).
 * **Rate Limiting**: Rate limiting is strictly scoped to `production` (`NODE_ENV === "production"`), ensuring test suites running under `NODE_ENV=test` never experience 429 request throttling.
+
+### 5.8 Client Data Fetching & Server State (Axios & TanStack Query)
+* **Centralized Axios Instance**:
+  - Always import and use the preconfigured client from [`client/src/lib/api.ts`](client/src/lib/api.ts) (`import { api } from "@/lib/api"`).
+  - Configured with `withCredentials: true` to automatically forward Better Auth session cookies with all requests.
+  - **Never use native `window.fetch()`** for application API calls.
+* **TanStack Query (React Query v5)**:
+  - Use `useQuery` for read queries with structured `queryKey` arrays (e.g. `queryKey: ["users"]`, `queryKey: ["tickets", id]`).
+  - Use `useMutation` for write/update/delete operations and invalidate associated query keys (`queryClient.invalidateQueries({ queryKey: [...] })`).
+  - Do not manage asynchronous fetch state manually with `useState`/`useEffect` boilerplate; rely on TanStack Query for caching, automatic deduplication, and background synchronization.
+* **Type-Safe Error Handling**:
+  - Narrow caught errors using `axios.isAxiosError(err)` to access `err.response?.status` and backend error messages (`err.response?.data?.error`).
+  - The shared `queryClient` (`client/src/lib/query-client.ts`) is configured to suppress automatic retries on `401 Unauthorized`, `403 Forbidden`, and `404 Not Found` errors.
 
 ---
 
@@ -274,6 +290,34 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - **Database Seeding**: Enhanced `server/prisma/seed.ts` to seed `test@example.com`, `admin@example.com`, and `agent@example.com` idempotently in `helpdesk_test`.
 - **Verification**: Executed via `bun run test:e2e` against `helpdesk_test` (port 5001 backend, port 5174 frontend): 14/14 tests passed with 100% success rate (26.9s).
 
+### Milestone 12: Admin User List Feature (Full-Stack & E2E)
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma Client`)**:
+  - `server/src/services/user.service.ts`: `getAllUsers()` fetches all users projecting only safe fields (`id`, `name`, `email`, `role`, `emailVerified`, `image`, `createdAt`, `updatedAt`), sorting by role (Admins first) and date descending.
+  - `server/src/controllers/user.controller.ts`: `listUsers()` controller returns standardized envelope `{ success: true, data: users }`.
+  - `server/src/routes/user.routes.ts`: `GET /api/users` guarded with `requireAdmin` middleware (unauthenticated requests return 401, `AGENT` returns 403, `ADMIN` returns 200).
+  - `server/src/routes/admin.routes.ts`: updated to use `userController.listUsers` for backward compatibility with `GET /api/admin/users`.
+  - `server/src/index.ts`: mounted `userRoutes` at `/api/users`.
+- **Frontend UI & Access Control**:
+  - Created `client/src/components/ui/badge.tsx` (shadcn Badge with `cva`, supporting `admin`, `agent`, `success`, `destructive`, `outline`, and default variants).
+  - Redesigned `client/src/pages/UsersPage.tsx`:
+    - Summary stat cards: Total Users, Administrators, and Support Agents.
+    - Real-time search filter: Filter by name or email with "Clear search filter" button on empty state.
+    - Role filter buttons: All, Admins, Agents with badge counters.
+    - Users table (`data-testid="users-table"`): User name & initials avatar, email, role badge with icons, email verification status badge, and formatted joined date.
+    - Loading skeletons and error alert with "Try Again" retry button.
+    - Access control: Route `/users` guarded by `AdminRoute` (redirects non-admins to `/` and unauthenticated to `/login`), with conditional "Users" link in `Navbar` shown only to `ADMIN` users.
+  - Replaced native `fetch` with centralized Axios client (`client/src/lib/api.ts`) configured with `withCredentials: true`, using `axios.isAxiosError` for type-safe error handling across `HomePage.tsx` and `UsersPage.tsx`.
+  - Integrated **TanStack Query (v5)** (`@tanstack/react-query`) with shared `QueryClient` (`client/src/lib/query-client.ts`) wrapped in `App.tsx`, providing caching, background refetching, and intelligent retry suppression on 401/403/404 errors.
+- **E2E Testing with `playwright-e2e` Subagent**:
+  - Authored comprehensive 10-test suite in `e2e/users/users-list.spec.ts`:
+    - Admin access, navbar navigation, stat cards, table rendering, role badges, and data refresh.
+    - Search input filtering and role filter buttons.
+    - RBAC enforcement: Agent navbar exclusion, redirect from `/users` to `/`, API rejection with 403 Forbidden.
+    - Unauthenticated protection: redirect to `/login`, API rejection with 401 Unauthorized.
+    - API backward compatibility: `GET /api/admin/users` returns 200 with safe payload.
+- **Verification**:
+  - `bun run test:e2e` executed all **24 tests** (14 auth + 10 user list) with **100% pass rate** against `helpdesk_test`.
+
 ---
 
 ## 7. Current Repository Layout
@@ -284,6 +328,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── components/
 │   │   │   ├── ui/              # shadcn UI components (Base UI primitives)
 │   │   │   │   ├── alert.tsx
+│   │   │   │   ├── badge.tsx    # Role & status badge component
 │   │   │   │   ├── button.tsx
 │   │   │   │   ├── card.tsx
 │   │   │   │   ├── input.tsx
@@ -296,12 +341,14 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   ├── AuthContext.ts   # Session context & useSession hook
 │   │   │   └── AuthProvider.tsx # Session provider fetching from DB
 │   │   ├── lib/
+│   │   │   ├── api.ts           # Centralized Axios client instance (withCredentials: true)
 │   │   │   ├── auth-client.ts   # Better Auth client instance
+│   │   │   ├── query-client.ts  # TanStack QueryClient with auth retry suppression
 │   │   │   └── utils.ts         # shadcn cn utility function
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
 │   │   │   ├── LoginPage.tsx    # Sign-in form styled with shadcn components
-│   │   │   └── UsersPage.tsx    # Admin users page with heading
+│   │   │   └── UsersPage.tsx    # Admin user management dashboard
 │   │   ├── App.tsx              # Main App layout, ProtectedRoute & Router
 │   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme
 │   │   └── main.tsx             # Entry point
@@ -318,8 +365,17 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   └── seed.ts              # Admin user seed script (supports test db)
 │   ├── src/
 │   │   ├── auth.ts              # Better Auth server configuration
-│   │   ├── prisma.ts            # Prisma client instance (supports test db)
 │   │   ├── config/env.ts        # Environment validator (supports test env)
+│   │   ├── controllers/
+│   │   │   └── user.controller.ts # User management handlers
+│   │   ├── middleware/
+│   │   │   └── auth.middleware.ts # requireAuth & requireAdmin RBAC
+│   │   ├── prisma.ts            # Prisma client instance (supports test db)
+│   │   ├── routes/
+│   │   │   ├── admin.routes.ts  # Legacy admin routes (/api/admin)
+│   │   │   └── user.routes.ts   # User management routes (/api/users)
+│   │   ├── services/
+│   │   │   └── user.service.ts  # User queries & safe data projections
 │   │   └── index.ts             # Express server connected to PostgreSQL
 │   ├── .env                     # Local Postgres on port 5433 (helpdesk)
 │   ├── .env.test                # Local Postgres on port 5433 (helpdesk_test)
@@ -346,6 +402,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   └── auth.ts              # Test credentials and UI action helpers
 │   ├── scripts/
 │   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
+│   ├── users/
+│   │   └── users-list.spec.ts   # Admin user list, search, filters & RBAC protection tests
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)
 ├── playwright.config.ts         # Playwright config (outputDir & reporter in e2e/)

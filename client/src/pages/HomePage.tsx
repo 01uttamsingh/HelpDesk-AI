@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { CheckCircle2, AlertCircle, Database, Server } from "lucide-react";
 import { useSession } from "../context/AuthContext";
+import { api } from "../lib/api";
 
 interface HealthResponse {
   status: string;
@@ -11,28 +14,26 @@ interface HealthResponse {
 
 export function HomePage() {
   const session = useSession();
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [healthLoading, setHealthLoading] = useState(true);
-  const [healthError, setHealthError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`API returned status ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data: HealthResponse) => {
-        setHealth(data);
-      })
-      .catch((err) => {
-        setHealthError(err.message || "Failed to contact backend API");
-      })
-      .finally(() => {
-        setHealthLoading(false);
-      });
-  }, []);
+  const {
+    data: health,
+    isLoading: healthLoading,
+    error: queryError,
+  } = useQuery<HealthResponse, Error>({
+    queryKey: ["health"],
+    queryFn: async () => {
+      const res = await api.get<HealthResponse>("/api/health");
+      return res.data;
+    },
+  });
+
+  const healthError = useMemo(() => {
+    if (!queryError) return null;
+    if (axios.isAxiosError(queryError)) {
+      return queryError.response?.data?.message || queryError.message;
+    }
+    return queryError.message || "Failed to contact backend API";
+  }, [queryError]);
 
   const user = session.data?.user;
 

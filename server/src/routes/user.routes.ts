@@ -4,14 +4,14 @@ import * as userController from "../controllers/user.controller";
 
 const router = Router();
 
-// Apply requireAdmin to all routes in this router
+// Enforce admin authentication across all user management routes
 router.use(requireAdmin);
 
 /**
- * GET /api/admin/users
- * Returns list of all registered users (Agents & Admins).
- * Accessible only to authenticated users with ADMIN role.
+ * GET /api/users
+ * Returns list of all platform users (Admins & Agents).
+ * Restricted to ADMIN role.
  */
-router.get("/users", userController.listUsers);
+router.get("/", userController.listUsers);
 
 export default router;
