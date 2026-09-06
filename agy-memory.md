@@ -201,6 +201,14 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - `client/src/pages/HomePage.tsx`: updated cards, badges, and background to match shadcn theme variables.
 - Resolved TypeScript 6 deprecation (`baseUrl`) and verified production build: `tsc -b && vite build` builds cleanly in <1s.
 
+### Milestone 8: Admin-Only Route & Users Page
+- Created `UsersPage` (`client/src/pages/UsersPage.tsx`) containing a clean heading.
+- Enhanced `ProtectedRoute` (`client/src/components/ProtectedRoute.tsx`) with `requiredRole` enforcement.
+- Created `AdminRoute` wrapper (`client/src/components/AdminRoute.tsx`) restricting access to users with `role: "ADMIN"`.
+- Registered `/users` route in `client/src/App.tsx` guarded by `AdminRoute`.
+- Added conditional "Users" link in `Navbar` (`client/src/components/Navbar.tsx`) displayed only for `ADMIN` users.
+
+
 ---
 
 ## 7. Current Repository Layout
@@ -216,8 +224,9 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── input.tsx
 │   │   │   │   ├── label.tsx
 │   │   │   │   └── separator.tsx
-│   │   │   ├── Navbar.tsx       # Navigation bar with user info & sign out
-│   │   │   └── ProtectedRoute.tsx # Route protection with loading & login redirect
+│   │   │   ├── AdminRoute.tsx   # Admin-only route guard
+│   │   │   ├── Navbar.tsx       # Navigation bar with role-aware nav & sign out
+│   │   │   └── ProtectedRoute.tsx # Route protection with role checks & login redirect
 │   │   ├── context/
 │   │   │   ├── AuthContext.ts   # Session context & useSession hook
 │   │   │   └── AuthProvider.tsx # Session provider fetching from DB
@@ -226,7 +235,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   └── utils.ts         # shadcn cn utility function
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
-│   │   │   └── LoginPage.tsx    # Sign-in form styled with shadcn components
+│   │   │   ├── LoginPage.tsx    # Sign-in form styled with shadcn components
+│   │   │   └── UsersPage.tsx    # Admin users page with heading
 │   │   ├── App.tsx              # Main App layout, ProtectedRoute & Router
 │   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme
 │   │   └── main.tsx             # Entry point

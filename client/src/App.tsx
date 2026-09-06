@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthProvider";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { Navbar } from "./components/Navbar";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { UsersPage } from "./pages/UsersPage";
 
 export function App() {
   return (
@@ -19,6 +21,14 @@ export function App() {
                   <ProtectedRoute>
                     <HomePage />
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <AdminRoute>
+                    <UsersPage />
+                  </AdminRoute>
                 }
               />
               <Route path="/login" element={<LoginPage />} />

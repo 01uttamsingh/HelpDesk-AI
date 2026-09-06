@@ -30,18 +30,31 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo & Name */}
-        <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <LifeBuoy className="h-5 w-5" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight text-foreground">Helpdesk</span>
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground border border-border">
-              AI
-            </span>
-          </div>
-        </Link>
+        {/* Left Section: Brand Logo & Navigation */}
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <LifeBuoy className="h-5 w-5" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold tracking-tight text-foreground">Helpdesk</span>
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground border border-border">
+                AI
+              </span>
+            </div>
+          </Link>
+
+          {user?.role?.toUpperCase() === "ADMIN" && (
+            <nav className="flex items-center gap-4">
+              <Link
+                to="/users"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Users
+              </Link>
+            </nav>
+          )}
+        </div>
 
         {/* Right Section: Auth State */}
         <div className="flex items-center gap-3">

@@ -33,7 +33,7 @@ This plan breaks down the development of the autonomous AI helpdesk into discret
   - `GET /api/admin/users`: List all agents and admins.
   - `POST /api/admin/users`: Create a new Agent account (Admin only).
   - `PATCH /api/admin/users/:id`: Activate/Deactivate or update role.
-- [ ] **2.4 Frontend Auth State & Login View**
+- [x] **2.4 Frontend Auth State & Login View**
   - Build AuthContext in React to manage current user session.
   - Create Login page (`/login`) with error handling.
   - Create Protected Route wrappers for authenticated users and Admin-only routes.
