@@ -2,7 +2,8 @@
 
 ## Frontend
 - **React with TypeScript**: Widely adopted, strong ecosystem for building dashboards and data-heavy UIs.
-- **Tailwind CSS**: Fast utility-first styling without fighting a component library.
+- **Tailwind CSS v4**: Modern zero-config utility-first styling with `@tailwindcss/vite`.
+- **shadcn/ui**: Accessible and customizable component library built on Base UI primitives, Lucide icons, and default `neutral` theme with CSS variables.
 - **React Router**: Client-side routing for navigating pages and ticket details.
 
 ## Backend

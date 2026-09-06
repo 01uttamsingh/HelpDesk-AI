@@ -21,6 +21,7 @@ This living document tracks project context, architectural decisions, tooling ru
 | **Runtime & Package Manager** | **Bun** (v1.4+) | Fast package installation, workspaces, native TypeScript execution. |
 | **Frontend** | **React 19 + Vite + TypeScript** | Client SPA in `/client`, proxying `/api` requests to backend on port 5000. |
 | **Styling** | **Tailwind CSS v4** | Modern zero-config setup using `@tailwindcss/vite` and `@import "tailwindcss";`. |
+| **UI Components** | **shadcn/ui** | Accessible components with Base UI primitives, Lucide icons, Geist font, and default `neutral` theme using CSS variables. |
 | **Client Routing** | **React Router (v7+)** | Client-side routing for dashboard and ticket views. |
 | **Backend** | **Node.js + Express + TypeScript** | REST API in `/server`, executed via `bun --watch src/index.ts`. |
 | **Authentication** | **Database Sessions** | **Better Auth** (email/password, database sessions via Prisma adapter backed by PostgreSQL). |
@@ -175,6 +176,31 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Normalized email in `client/src/pages/LoginPage.tsx` on submit (`trim().toLowerCase()`).
 - Verified end-to-end: session retrieval, invalid login rejection (401), valid login redirect (200), uppercase/mixed-case email sign-in (`TEST@example.com`), session persistence, unauthenticated root redirect, and session destruction on sign-out.
 
+### Milestone 7: shadcn/ui & Default Theme Integration
+- Installed and initialized **shadcn CLI** (v4.21.0) for `/client` workspace with Vite + Tailwind CSS v4.
+- Configured import path aliases (`@/*` -> `./src/*`) in `client/vite.config.ts`, `client/tsconfig.json`, and `client/tsconfig.app.json`.
+- Applied shadcn's official **default theme** (`neutral` base color, Nova preset, CSS variables in OKLCH):
+  - Configured `components.json` with `style: "base-nova"`, `baseColor: "neutral"`, `cssVariables: true`, `iconLibrary: "lucide"`.
+  - Configured `client/src/index.css` with `@theme inline`, color tokens (`--primary: oklch(0.205 0 0)`, `--background`, `--card`, `--muted`, `--border`, etc.), and `@fontsource-variable/geist`.
+- Installed shadcn UI components built on Base UI primitives:
+  - `button` (`client/src/components/ui/button.tsx`)
+  - `card` (`client/src/components/ui/card.tsx`)
+  - `input` (`client/src/components/ui/input.tsx`)
+  - `label` (`client/src/components/ui/label.tsx`)
+  - `alert` (`client/src/components/ui/alert.tsx`)
+  - `separator` (`client/src/components/ui/separator.tsx`)
+  - `cn` utility (`client/src/lib/utils.ts`)
+- Redesigned `LoginPage` (`client/src/pages/LoginPage.tsx`):
+  - Replaced manual Tailwind classes with shadcn `<Card>`, `<CardHeader>`, `<CardTitle>`, `<CardDescription>`, `<CardContent>`, and `<CardFooter>`.
+  - Replaced manual inputs and labels with `<Input>` and `<Label>` supporting inline icons and `aria-invalid` error states.
+  - Replaced native submit button with shadcn `<Button>` and loading spinner.
+  - Replaced manual error div with shadcn `<Alert variant="destructive">`.
+- Harmonized application layout and components to use shadcn theme variables:
+  - `client/src/App.tsx`: updated wrapper and footer to `bg-background text-foreground border-border bg-card`.
+  - `client/src/components/Navbar.tsx`: updated header and buttons to use shadcn `<Button>` and theme tokens.
+  - `client/src/pages/HomePage.tsx`: updated cards, badges, and background to match shadcn theme variables.
+- Resolved TypeScript 6 deprecation (`baseUrl`) and verified production build: `tsc -b && vite build` builds cleanly in <1s.
+
 ---
 
 ## 7. Current Repository Layout
@@ -183,20 +209,31 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ├── client/                      # React + Vite + TypeScript (Bun)
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── ui/              # shadcn UI components (Base UI primitives)
+│   │   │   │   ├── alert.tsx
+│   │   │   │   ├── button.tsx
+│   │   │   │   ├── card.tsx
+│   │   │   │   ├── input.tsx
+│   │   │   │   ├── label.tsx
+│   │   │   │   └── separator.tsx
 │   │   │   ├── Navbar.tsx       # Navigation bar with user info & sign out
 │   │   │   └── ProtectedRoute.tsx # Route protection with loading & login redirect
 │   │   ├── context/
 │   │   │   ├── AuthContext.ts   # Session context & useSession hook
 │   │   │   └── AuthProvider.tsx # Session provider fetching from DB
 │   │   ├── lib/
-│   │   │   └── auth-client.ts   # Better Auth client instance
+│   │   │   ├── auth-client.ts   # Better Auth client instance
+│   │   │   └── utils.ts         # shadcn cn utility function
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
-│   │   │   └── LoginPage.tsx    # Sign-in form with validation & redirect
+│   │   │   └── LoginPage.tsx    # Sign-in form styled with shadcn components
 │   │   ├── App.tsx              # Main App layout, ProtectedRoute & Router
-│   │   ├── index.css            # Tailwind CSS v4 setup
+│   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme
 │   │   └── main.tsx             # Entry point
-│   ├── vite.config.ts           # Vite config with API proxy & dedupe
+│   ├── components.json          # shadcn configuration (base-nova, neutral)
+│   ├── vite.config.ts           # Vite config with @ alias & API proxy
+│   ├── tsconfig.app.json        # TS app config with @/* path alias
+│   ├── tsconfig.json
 │   └── package.json
 │
 ├── server/                      # Express + TypeScript (Bun)

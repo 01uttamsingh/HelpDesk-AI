@@ -4,6 +4,9 @@ import { LifeBuoy, LogIn, LogOut, User, Loader2 } from "lucide-react";
 import { useSession } from "../context/AuthContext";
 import { signOut } from "../lib/auth-client";
 
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 export function Navbar() {
   const navigate = useNavigate();
   const session = useSession();
@@ -25,16 +28,16 @@ export function Navbar() {
   const user = session.data?.user;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo & Name */}
         <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
             <LifeBuoy className="h-5 w-5" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight text-slate-900">Helpdesk</span>
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200/60">
+            <span className="text-lg font-bold tracking-tight text-foreground">Helpdesk</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground border border-border">
               AI
             </span>
           </div>
@@ -44,14 +47,14 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {session.isPending ? (
             <div className="flex items-center gap-2">
-              <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-md" />
-              <div className="h-8 w-8 bg-slate-100 animate-pulse rounded-full" />
+              <div className="h-8 w-24 bg-muted animate-pulse rounded-md" />
+              <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
             </div>
           ) : user ? (
             <div className="flex items-center gap-3">
               {/* User Avatar & Name */}
-              <div className="flex items-center gap-2.5 py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-bold shadow-xs">
+              <div className="flex items-center gap-2.5 py-1 px-2.5 rounded-lg bg-muted/50 border border-border">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-xs">
                   {user.name ? (
                     user.name.charAt(0).toUpperCase()
                   ) : (
@@ -59,40 +62,41 @@ export function Navbar() {
                   )}
                 </div>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm font-semibold text-slate-900 leading-tight">
+                  <span className="text-sm font-semibold text-foreground leading-tight">
                     {user.name}
                   </span>
-                  <span className="text-xs text-slate-500 leading-none">
+                  <span className="text-xs text-muted-foreground leading-none">
                     {user.email}
                   </span>
                 </div>
               </div>
 
               {/* Sign Out Button */}
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 transition-colors cursor-pointer"
                 title="Sign out of your account"
+                className="gap-1.5"
               >
                 {isLoggingOut ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     <span>Signing out...</span>
                   </>
                 ) : (
                   <>
-                    <LogOut className="h-4 w-4 text-slate-500" />
+                    <LogOut className="h-4 w-4 text-muted-foreground" />
                     <span>Sign out</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           ) : (
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+              className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}
             >
               <LogIn className="h-4 w-4" />
               <span>Sign in</span>

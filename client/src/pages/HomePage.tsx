@@ -37,42 +37,42 @@ export function HomePage() {
   const user = session.data?.user;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-4rem)] bg-muted/30 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Welcome Banner */}
-        <div className="rounded-2xl bg-white border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+        <div className="rounded-2xl bg-card border border-border p-6 sm:p-8 shadow-xs">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Welcome, {user?.name}!
               </h1>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/70">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Authenticated
               </span>
             </div>
-            <p className="text-sm text-slate-600">
-              Signed in as <span className="font-medium text-slate-800">{user?.email}</span>
+            <p className="text-sm text-muted-foreground">
+              Signed in as <span className="font-medium text-foreground">{user?.email}</span>
             </p>
           </div>
         </div>
 
         {/* Backend & Database Status Card */}
-        <div className="rounded-2xl bg-white border border-slate-200/80 p-6 shadow-xs">
+        <div className="rounded-2xl bg-card border border-border p-6 shadow-xs">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <Server className="h-4 w-4 text-slate-500" />
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <Server className="h-4 w-4 text-muted-foreground" />
               System Status
             </h2>
             {healthLoading ? (
-              <span className="text-xs text-slate-500">Checking...</span>
+              <span className="text-xs text-muted-foreground">Checking...</span>
             ) : health ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Operational
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-200">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-destructive bg-destructive/10 px-2.5 py-1 rounded-full border border-destructive/20">
                 <AlertCircle className="h-3.5 w-3.5" />
                 Degraded
               </span>
@@ -80,16 +80,16 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
-              <div className="p-2 rounded-lg bg-white border border-slate-200 shadow-xs">
-                <Server className="h-4 w-4 text-blue-600" />
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-muted/40 border border-border">
+              <div className="p-2 rounded-lg bg-card border border-border shadow-xs">
+                <Server className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-800">API Server</p>
-                  <span className="text-xs text-slate-500">Port 5000</span>
+                  <p className="text-sm font-medium text-foreground">API Server</p>
+                  <span className="text-xs text-muted-foreground">Port 5000</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {healthLoading
                     ? "Connecting..."
                     : healthError
@@ -99,16 +99,16 @@ export function HomePage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
-              <div className="p-2 rounded-lg bg-white border border-slate-200 shadow-xs">
-                <Database className="h-4 w-4 text-emerald-600" />
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-muted/40 border border-border">
+              <div className="p-2 rounded-lg bg-card border border-border shadow-xs">
+                <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-800">Database</p>
-                  <span className="text-xs text-slate-500">Port 5433</span>
+                  <p className="text-sm font-medium text-foreground">Database</p>
+                  <span className="text-xs text-muted-foreground">Port 5433</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {healthLoading
                     ? "Querying database..."
                     : health?.database === "connected"
