@@ -1,8 +1,13 @@
 import dotenv from "dotenv";
+import path from "path";
 import { hashPassword } from "better-auth/crypto";
 import { Role } from "@prisma/client";
 import prisma from "../src/prisma";
 
+if (process.env.NODE_ENV === "test") {
+  dotenv.config({ path: path.resolve(process.cwd(), ".env.test"), override: true });
+  dotenv.config({ path: path.resolve(process.cwd(), "server/.env.test"), override: true });
+}
 dotenv.config();
 
 async function main() {

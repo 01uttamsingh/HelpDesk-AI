@@ -218,9 +218,22 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - **Startup Environment Validation**: Created `server/src/config/env.ts` using Zod to validate `BETTER_AUTH_SECRET` (>= 32 chars), `DATABASE_URL`, URLs, and ports at startup.
 - **Secret Hardening**: Removed hardcoded fallback secret `"dev-session-secret-change-in-production-12345"` from `server/src/auth.ts` and pruned `SESSION_SECRET` from `server/.env`.
 - **CORS Restriction**: Synchronized Express `cors` and Better Auth `trustedOrigins` using `getTrustedOrigins()`, rejecting unauthorized origins.
-- **Rate Limiting**: Configured rate limiting on `/api/auth/*` via Better Auth and `express-rate-limit` (10 requests/min).
+- **Rate Limiting**: Configured rate limiting on `/api/auth/*` via Better Auth and `express-rate-limit` (10 requests/min), enabled strictly in the `production` environment (`NODE_ENV === "production"`) to prevent rate-limit interference during testing and development.
 - **Database Seed Normalization**: Added `.toLowerCase()` email normalization in `server/prisma/seed.ts`.
 - **Verification**: Verified via end-to-end automated test suite across all user roles and endpoints.
+
+### Milestone 10: Playwright & Isolated Test Database Setup
+- **Playwright Setup**: Installed `@playwright/test` (v1.63.0) and Playwright Chromium headless/shell binaries.
+- **Dedicated Test Database**: Provisioned isolated PostgreSQL test database `helpdesk_test` on port 5433, completely decoupled from development database `helpdesk`.
+- **Database Provisioning Automation**: Created `server/scripts/setup-test-db.ts` providing automatic database creation, migration deployment via Prisma CLI, idempotent admin seeding, and `--reset` support with safety guards.
+- **Environment Isolation**:
+  - Created `server/.env.test` and root `.env.test` targeting `helpdesk_test` on test ports (Backend: 5001, Frontend: 5174).
+  - Configured `server/src/config/env.ts`, `server/src/prisma.ts`, and `server/prisma/seed.ts` to load `.env.test` with `override: true` when `NODE_ENV === "test"`.
+  - Updated `client/vite.config.ts` to allow dynamic port and proxy target overrides via `PORT` / `VITE_PORT` and `API_URL` / `VITE_API_URL`.
+- **Production-Only Rate Limiting**: Scoped both Express `express-rate-limit` and Better Auth internal `rateLimit` to `NODE_ENV === "production"`.
+- **Playwright Configuration**: Created `playwright.config.ts` with dual `webServer` orchestration (server on port 5001 with test db, client on port 5174), single worker for database isolation, and failure artifact captures.
+- **Package Scripts**: Added `db:test:setup`, `db:test:reset`, `test:server`, `test:client`, `test:e2e`, `test:e2e:ui`, and `test:e2e:headed` scripts in root `package.json`.
+- **Strict Compliance**: No test specs written per prompt instruction; verified clean configuration and dual webServer launch.
 
 ---
 
@@ -254,7 +267,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme
 │   │   └── main.tsx             # Entry point
 │   ├── components.json          # shadcn configuration (base-nova, neutral)
-│   ├── vite.config.ts           # Vite config with @ alias & API proxy
+│   ├── vite.config.ts           # Vite config with @ alias, configurable test port & proxy
 │   ├── tsconfig.app.json        # TS app config with @/* path alias
 │   ├── tsconfig.json
 │   └── package.json
@@ -263,19 +276,26 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── prisma/
 │   │   ├── migrations/          # Applied database migrations
 │   │   ├── schema.prisma        # Prisma schema
-│   │   └── seed.ts              # Admin user seed script
+│   │   └── seed.ts              # Admin user seed script (supports test db)
+│   ├── scripts/
+│   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
 │   ├── src/
 │   │   ├── auth.ts              # Better Auth server configuration
-│   │   ├── prisma.ts            # Prisma client instance
+│   │   ├── prisma.ts            # Prisma client instance (supports test db)
+│   │   ├── config/env.ts        # Environment validator (supports test env)
 │   │   └── index.ts             # Express server connected to PostgreSQL
-│   ├── .env                     # Configured with local Postgres on port 5433
+│   ├── .env                     # Local Postgres on port 5433 (helpdesk)
+│   ├── .env.test                # Local Postgres on port 5433 (helpdesk_test)
 │   ├── .env.example
 │   ├── prisma.config.ts         # Prisma CLI configuration
 │   ├── tsconfig.json
 │   └── package.json
 │
-├── package.json                 # Root Bun workspaces configuration
-├── .gitignore
+├── e2e/                         # Playwright E2E test specs (ready for tests)
+├── playwright.config.ts         # Playwright test configuration & webServer orchestration
+├── .env.test                    # Root test environment variables
+├── package.json                 # Root Bun workspaces configuration & test scripts
+├── .gitignore                   # Configured with Playwright test-results & reports ignored
 ├── README.md
 ├── project-scope.md
 ├── tech-stack.md

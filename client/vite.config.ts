@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 import path from 'path'
 
+const PORT = Number(process.env.VITE_PORT || process.env.PORT) || 5173;
+const API_URL = process.env.VITE_API_URL || process.env.API_URL || 'http://localhost:5000';
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -17,10 +20,10 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   server: {
-    port: 5173,
+    port: PORT,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: API_URL,
         changeOrigin: true,
       },
     },

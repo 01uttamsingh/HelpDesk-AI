@@ -46,19 +46,21 @@ app.use(
   })
 );
 
-// 4. Rate limiting on authentication endpoints (brute-force & credential stuffing defense)
-const authRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10,             // max 10 requests per minute
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: "Too many authentication attempts. Please try again in 60 seconds.",
-  },
-});
+// 4. Rate limiting on authentication endpoints (brute-force & credential stuffing defense, production only)
+if (env.NODE_ENV === "production") {
+  const authRateLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10,             // max 10 requests per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      error: "Too many authentication attempts. Please try again in 60 seconds.",
+    },
+  });
 
-app.use("/api/auth", authRateLimiter);
+  app.use("/api/auth", authRateLimiter);
+}
 
 // Mount Better Auth handler before standard body parsers
 app.all("/api/auth/*", toNodeHandler(auth));

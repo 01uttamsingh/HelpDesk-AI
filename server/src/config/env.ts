@@ -1,7 +1,12 @@
 import dotenv from "dotenv";
+import path from "path";
 import { z } from "zod";
 
-// Load environment variables from .env
+// Prioritize test environment variables when NODE_ENV is test
+if (process.env.NODE_ENV === "test") {
+  dotenv.config({ path: path.resolve(process.cwd(), ".env.test"), override: true });
+  dotenv.config({ path: path.resolve(process.cwd(), "server/.env.test"), override: true });
+}
 dotenv.config();
 
 const envSchema = z.object({
