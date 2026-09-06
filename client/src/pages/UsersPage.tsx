@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import axios from "axios";
 import { api } from "@/lib/api";
 
@@ -266,24 +267,24 @@ export function UsersPage() {
               {isLoading ? (
                 // Loading Skeleton Rows
                 Array.from({ length: 4 }).map((_, idx) => (
-                  <tr key={idx} className="animate-pulse">
+                  <tr key={idx}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-muted" />
-                        <div className="h-4 w-28 bg-muted rounded" />
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <Skeleton className="h-4 w-28" />
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="h-4 w-36 bg-muted rounded" />
+                      <Skeleton className="h-4 w-36" />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="h-5 w-16 bg-muted rounded-md" />
+                      <Skeleton className="h-5 w-16" />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="h-5 w-20 bg-muted rounded-md" />
+                      <Skeleton className="h-5 w-20" />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="h-4 w-24 bg-muted rounded" />
+                      <Skeleton className="h-4 w-24" />
                     </td>
                   </tr>
                 ))

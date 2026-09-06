@@ -333,7 +333,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── card.tsx
 │   │   │   │   ├── input.tsx
 │   │   │   │   ├── label.tsx
-│   │   │   │   └── separator.tsx
+│   │   │   │   ├── separator.tsx
+│   │   │   │   └── skeleton.tsx # Skeleton loading placeholder component
 │   │   │   ├── AdminRoute.tsx   # Admin-only route guard
 │   │   │   ├── Navbar.tsx       # Navigation bar with role-aware nav & sign out
 │   │   │   └── ProtectedRoute.tsx # Route protection with role checks & login redirect
