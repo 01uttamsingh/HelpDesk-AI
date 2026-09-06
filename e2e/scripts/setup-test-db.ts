@@ -3,8 +3,11 @@ import { execSync } from "child_process";
 import path from "path";
 import dotenv from "dotenv";
 
+const rootDir = path.resolve(import.meta.dirname, "../..");
+const serverDir = path.resolve(rootDir, "server");
+
 // Load test environment variables with override: true
-const serverDir = path.resolve(import.meta.dirname, "..");
+dotenv.config({ path: path.resolve(rootDir, ".env.test"), override: true });
 dotenv.config({ path: path.resolve(serverDir, ".env.test"), override: true });
 
 const isReset = process.argv.includes("--reset");
@@ -25,9 +28,6 @@ async function setupTestDb() {
   console.log(`\n========================================`);
   console.log(`🔧 Configuring Test Database`);
   console.log(`========================================`);
-
-  const parsedUrl = new URL(databaseUrl.replace(/^postgresql:\/\//, "http://"));
-  const dbName = parsedUrl.pathname.replace(/^\//, "").split("?")[0] || "helpdesk_test";
 
   // Connection URL pointing to default "postgres" administrative database
   const adminUrl = databaseUrl.replace(`/${dbName}`, "/postgres");

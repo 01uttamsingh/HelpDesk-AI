@@ -37,13 +37,13 @@ When Playwright runs (`bun run test:e2e`), its `webServer` configuration automat
 * **Playwright baseURL**: `http://localhost:5174`.
 
 ### 2.2 Test Database Management
-* **Setup Script**: `bun run db:test:setup` (or `bun run --cwd server db:test:setup`).
+* **Setup Script**: `bun run db:test:setup` (executes `e2e/scripts/setup-test-db.ts`).
   * Connects to PostgreSQL on port 5433.
   * Verifies or creates database `helpdesk_test`.
   * Deploys Prisma migrations via `bunx prisma migrate deploy`.
   * Seeds the test admin account.
 * **Reset Script**: `bun run db:test:reset` (drops, recreates, remigrates, and reseeds `helpdesk_test`).
-* **Safety Guard**: `server/scripts/setup-test-db.ts` contains an explicit check preventing accidental execution against non-test databases (e.g., `helpdesk`).
+* **Safety Guard**: `e2e/scripts/setup-test-db.ts` contains an explicit check preventing accidental execution against non-test databases (e.g., `helpdesk`).
 
 ### 2.3 Pre-Seeded Test Credentials
 The test database is pre-seeded with:
@@ -75,7 +75,7 @@ The test database is pre-seeded with:
 
 ## 3. Directory Layout & Organization
 
-All E2E tests reside in the root `/e2e` directory:
+All E2E test files, test scripts, and test artifacts reside in the `/e2e` directory:
 
 ```text
 e2e/
@@ -86,7 +86,10 @@ e2e/
 │   └── admin-routes.spec.ts    # Admin-only access to /users, agent restriction
 ├── tickets/                    # Ticket creation, view, message replies (Phase 3+)
 ├── fixtures/                   # Shared test fixtures (e.g. auth storage state)
-└── helpers/                    # Test utilities (e.g. db cleaner, api helpers)
+├── helpers/                    # Test utilities (e.g. auth.ts, db cleaner)
+├── scripts/                    # Test database management scripts (setup-test-db.ts)
+├── playwright-report/          # HTML test execution reports (gitignored)
+└── test-results/               # Failure screenshots & trace videos (gitignored)
 ```
 
 ---

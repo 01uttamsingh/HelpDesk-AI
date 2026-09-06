@@ -24,7 +24,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: [["html", { open: "never" }], ["list"]],
+  outputDir: "./e2e/test-results",
+  reporter: [["html", { outputFolder: "e2e/playwright-report", open: "never" }], ["list"]],
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",

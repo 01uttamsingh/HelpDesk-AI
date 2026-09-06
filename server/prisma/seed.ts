@@ -10,29 +10,43 @@ if (process.env.NODE_ENV === "test") {
 }
 dotenv.config();
 
-async function main() {
-  const email = (process.env.ADMIN_EMAIL || "test@example.com").trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD || "uvdb1357";
-  const name = process.env.ADMIN_NAME || "Admin";
+const usersToSeed = [
+  {
+    email: (process.env.ADMIN_EMAIL || "test@example.com").trim().toLowerCase(),
+    password: process.env.ADMIN_PASSWORD || "uvdb1357",
+    name: process.env.ADMIN_NAME || "Admin",
+    role: Role.ADMIN,
+  },
+  {
+    email: "admin@example.com",
+    password: process.env.ADMIN_PASSWORD || "uvdb1357",
+    name: "Admin",
+    role: Role.ADMIN,
+  },
+  {
+    email: "agent@example.com",
+    password: "uvdb1357",
+    name: "Agent",
+    role: Role.AGENT,
+  },
+];
 
-  console.log(`🌱 Seeding database...`);
-  console.log(`Checking for existing admin user (${email})...`);
-
+async function seedUser(userData: (typeof usersToSeed)[number]) {
   const existingUser = await prisma.user.findUnique({
-    where: { email },
+    where: { email: userData.email },
     include: { accounts: true },
   });
 
-  const hashedPassword = await hashPassword(password);
+  const hashedPassword = await hashPassword(userData.password);
 
   if (existingUser) {
-    console.log(`Admin user already exists. Updating role and credentials...`);
+    console.log(`User already exists (${userData.email}). Updating role and credentials...`);
 
     await prisma.user.update({
       where: { id: existingUser.id },
       data: {
-        role: Role.ADMIN,
-        name,
+        role: userData.role,
+        name: userData.name,
       },
     });
 
@@ -58,7 +72,7 @@ async function main() {
       });
     }
 
-    console.log(`✅ Admin user updated successfully! (${email}, Role: ADMIN)`);
+    console.log(`✅ User updated successfully! (${userData.email}, Role: ${userData.role})`);
   } else {
     const userId = crypto.randomUUID();
     const accountId = crypto.randomUUID();
@@ -66,9 +80,9 @@ async function main() {
     await prisma.user.create({
       data: {
         id: userId,
-        name,
-        email,
-        role: Role.ADMIN,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
         emailVerified: true,
         accounts: {
           create: {
@@ -82,7 +96,14 @@ async function main() {
       },
     });
 
-    console.log(`✅ Admin user created successfully! (${email}, Role: ADMIN)`);
+    console.log(`✅ User created successfully! (${userData.email}, Role: ${userData.role})`);
+  }
+}
+
+async function main() {
+  console.log(`🌱 Seeding database...`);
+  for (const user of usersToSeed) {
+    await seedUser(user);
   }
 }
 

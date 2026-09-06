@@ -12,8 +12,8 @@
     "dev:client": "bun run --cwd client dev",
     "build:server": "bun run --cwd server build",
     "build:client": "bun run --cwd client build",
-    "db:test:setup": "bun run --cwd server db:test:setup",
-    "db:test:reset": "bun run --cwd server db:test:reset",
+    "db:test:setup": "bun e2e/scripts/setup-test-db.ts",
+    "db:test:reset": "bun e2e/scripts/setup-test-db.ts --reset",
     "test:server": "bun run --cwd server test:server",
     "test:client": "bun run --cwd client test:client",
     "test:e2e": "bun run db:test:setup && bunx playwright test",
@@ -22,6 +22,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "dotenv": "^17.4.2"
+    "@types/pg": "^8.23.1",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0"
   }
 }

@@ -257,6 +257,23 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - **E2E Testing Instructions & Agent**: All detailed instructions, testing conventions, user workflows, locators, and operating guidelines for end-to-end testing are codified in [`.agents/agents/playwright-e2e/agent.md`](.agents/agents/playwright-e2e/agent.md).
 - **Strict Compliance**: No test specs written per initial prompt instruction; verified clean configuration and dual webServer launch.
 
+### Milestone 11: Authentication E2E Test Suite
+- **Authoring & Coverage**: Implemented a comprehensive 14-test Playwright E2E suite covering all authentication scenarios and edge cases:
+  - [`e2e/auth/login.spec.ts`](e2e/auth/login.spec.ts):
+    - Valid credentials sign-in, redirect to `/`, and Navbar state verification.
+    - Case-insensitivity (`TEST@EXAMPLE.COM`, `Admin@Example.com`) and whitespace trimming (`   test@example.com   `).
+    - Invalid credentials destructive error alerts (wrong password, non-existent user).
+    - Client-side form validation (empty fields, malformed email format).
+    - Password visibility toggle (masked `password` vs plain `text`).
+  - [`e2e/auth/session.spec.ts`](e2e/auth/session.spec.ts):
+    - Session persistence across page reloads.
+    - Sign out flow (terminates session, redirects to `/login`, and blocks subsequent protected navigation).
+    - Unauthenticated route protection (redirects `/` and `/users` to `/login`).
+    - Already-authenticated auto-redirect from `/login` back to `/`.
+  - [`e2e/helpers/auth.ts`](e2e/helpers/auth.ts): Shared test user fixtures and reusable UI helpers (`loginViaUI`, `signOutViaUI`).
+- **Database Seeding**: Enhanced `server/prisma/seed.ts` to seed `test@example.com`, `admin@example.com`, and `agent@example.com` idempotently in `helpdesk_test`.
+- **Verification**: Executed via `bun run test:e2e` against `helpdesk_test` (port 5001 backend, port 5174 frontend): 14/14 tests passed with 100% success rate (26.9s).
+
 ---
 
 ## 7. Current Repository Layout
@@ -299,8 +316,6 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── migrations/          # Applied database migrations
 │   │   ├── schema.prisma        # Prisma schema
 │   │   └── seed.ts              # Admin user seed script (supports test db)
-│   ├── scripts/
-│   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
 │   ├── src/
 │   │   ├── auth.ts              # Better Auth server configuration
 │   │   ├── prisma.ts            # Prisma client instance (supports test db)
@@ -323,11 +338,20 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │       └── better-auth-best-practices/
 │           └── SKILL.md
 │
-├── e2e/                         # Playwright E2E test specs (ready for tests)
-├── playwright.config.ts         # Playwright test configuration & webServer orchestration
+├── e2e/                         # Centralized Playwright test suite & test artifacts
+│   ├── auth/
+│   │   ├── login.spec.ts        # Login, case-insensitivity, error alert, validation tests
+│   │   └── session.spec.ts      # Session persistence, sign out, and route guard tests
+│   ├── helpers/
+│   │   └── auth.ts              # Test credentials and UI action helpers
+│   ├── scripts/
+│   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
+│   ├── playwright-report/       # HTML test execution reports (gitignored)
+│   └── test-results/            # Failure screenshots & trace videos (gitignored)
+├── playwright.config.ts         # Playwright config (outputDir & reporter in e2e/)
 ├── .env.test                    # Root test environment variables
 ├── package.json                 # Root Bun workspaces configuration & test scripts
-├── .gitignore                   # Configured with Playwright test-results & reports ignored
+├── .gitignore                   # Configured with e2e/test-results & reports ignored
 ├── README.md
 ├── project-scope.md
 ├── tech-stack.md
