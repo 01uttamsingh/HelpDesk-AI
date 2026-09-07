@@ -43,14 +43,30 @@ export function Navbar() {
             </div>
           </Link>
 
-          {user?.role?.toUpperCase() === "ADMIN" && (
+          {user && (
             <nav className="flex items-center gap-4">
               <Link
-                to="/users"
+                to="/"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="nav-dashboard-link"
               >
-                Users
+                Dashboard
               </Link>
+              <Link
+                to="/tickets"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="nav-tickets-link"
+              >
+                Tickets
+              </Link>
+              {user.role?.toUpperCase() === "ADMIN" && (
+                <Link
+                  to="/users"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Users
+                </Link>
+              )}
             </nav>
           )}
         </div>

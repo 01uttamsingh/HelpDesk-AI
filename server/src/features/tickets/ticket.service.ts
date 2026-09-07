@@ -1,5 +1,6 @@
 import prisma from "../../prisma";
-import type { Ticket } from "@prisma/client";
+import type { Ticket, Prisma } from "@prisma/client";
+import type { TicketFilterQuery } from "./ticket.types";
 
 export class TicketService {
   /**
@@ -22,11 +23,35 @@ export class TicketService {
   }
 
   /**
-   * Fetch all tickets ordered by creation date descending.
+   * Fetch tickets sorted by newest first (createdAt: "desc") by default,
+   * with optional filtering by status, category, search text, or sort order.
    */
-  async getAllTickets(): Promise<Ticket[]> {
+  async getAllTickets(query?: TicketFilterQuery): Promise<Ticket[]> {
+    const where: Prisma.TicketWhereInput = {};
+
+    if (query?.status) {
+      where.status = query.status;
+    }
+
+    if (query?.category) {
+      where.category = query.category;
+    }
+
+    if (query?.search && query.search.trim().length > 0) {
+      const q = query.search.trim();
+      where.OR = [
+        { subject: { contains: q, mode: "insensitive" } },
+        { senderName: { contains: q, mode: "insensitive" } },
+        { senderEmail: { contains: q, mode: "insensitive" } },
+        { body: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    const sortOrder: Prisma.SortOrder = query?.sort === "oldest" ? "asc" : "desc";
+
     return prisma.ticket.findMany({
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy: { createdAt: sortOrder },
       include: {
         assignedTo: {
           select: {

@@ -28,4 +28,11 @@ export interface CreateTicketInput {
   messageId?: string | null;
 }
 
+export interface TicketFilterQuery {
+  status?: TicketStatus;
+  category?: TicketCategory;
+  search?: string;
+  sort?: "newest" | "oldest";
+}
+
 export type { Ticket, TicketStatus, TicketPriority, TicketCategory };

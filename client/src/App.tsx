@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client";
 import { AuthProvider, ProtectedRoute, AdminRoute, LoginPage } from "./features/auth";
 import { UsersPage } from "./features/users";
+import { TicketsPage } from "./features/tickets";
 import { Navbar } from "./components/Navbar";
 import { HomePage } from "./pages/HomePage";
 
@@ -20,6 +21,14 @@ export function App() {
                 element={
                   <ProtectedRoute>
                     <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tickets"
+                element={
+                  <ProtectedRoute>
+                    <TicketsPage />
                   </ProtectedRoute>
                 }
               />

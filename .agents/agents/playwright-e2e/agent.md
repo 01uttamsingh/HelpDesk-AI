@@ -208,3 +208,4 @@ Strictly run all commands using **`bun`**:
 3. **No Flaky Tests**: Leverage Playwright's auto-waiting locators, avoid race conditions, and verify network responses when needed.
 4. **Keep Code Clean & Minimal**: Follow conventions defined in `agy-memory.md`—no premature abstractions or mock fluff.
 5. **Report Clearly**: When reporting test run results, provide test name, status, failure stack trace (if any), and exact fix.
+6. **Use E2E Only When Strictly Necessary**: Do NOT duplicate component or unit tests. Detailed UI logic, filter variations, search debouncing, modal transitions, and form validation states belong strictly in component tests (Vitest + React Testing Library). Keep Playwright suites focused strictly on essential cross-system happy paths and hard security boundaries.

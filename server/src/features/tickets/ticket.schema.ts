@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TicketCategory } from "@prisma/client";
+import { TicketCategory, TicketStatus } from "@prisma/client";
 
 /**
  * Normalizes category inputs into canonical TicketCategory enum values.
@@ -50,3 +50,12 @@ export const ticketIdParamSchema = z.object({
 });
 
 export type TicketIdParamInput = z.infer<typeof ticketIdParamSchema>;
+
+export const ticketQuerySchema = z.object({
+  status: z.nativeEnum(TicketStatus).optional(),
+  category: ticketCategorySchema,
+  search: z.string().optional(),
+  sort: z.enum(["newest", "oldest"]).default("newest").optional(),
+});
+
+export type TicketQueryInput = z.infer<typeof ticketQuerySchema>;

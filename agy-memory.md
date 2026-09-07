@@ -53,8 +53,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **Incremental Development**: Build phase-by-phase according to `implementation-plan.md`.
 * **Runtime**: Always use `bun` commands (`bun install`, `bun dev`, `bun run ...`) rather than `npm` or `node`.
 * **Client Data Fetching (Axios & TanStack Query)**: Always use the preconfigured **Axios** client (`client/src/lib/api.ts`) and **TanStack Query** (`useQuery`, `useMutation`) for client-side API requests and server-state management. Never use raw `window.fetch()` for backend API calls.
-* **Component & Unit Testing (React Testing Library + Vitest)**: Write component tests alongside UI features using React Testing Library (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and the custom `renderWithQuery` wrapper ([`client/src/test/renderWithQuery.tsx`](client/src/test/renderWithQuery.tsx)). Ensure mock isolation via `vi.resetAllMocks()` and `vi.restoreAllMocks()` in `beforeEach`. Run via `bun run test:component` (or `bun run test:unit`).
-* **E2E Testing with `playwright-e2e` Subagent**: For all end-to-end testing tasks (authoring tests, running suites, diagnosing test failures), delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
+* **Component & Unit Testing — Primary Choice (React Testing Library + Vitest)**: Rely primarily on component and unit tests for the majority of the testing suite. UI behavior, component rendering, user interactions, search/filtering, sorting, form validation errors, modal state transitions, and badge styling should all be covered at the component level using React Testing Library (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and the custom `renderWithQuery` wrapper ([`client/src/test/renderWithQuery.tsx`](client/src/test/renderWithQuery.tsx)). Ensure mock isolation via `vi.resetAllMocks()` and `vi.restoreAllMocks()` in `beforeEach`. Run via `bun run test:component` (or `bun run test:unit`).
+* **E2E Testing — Only When Strictly Necessary (Playwright)**: Reserve Playwright E2E tests strictly for essential end-to-end happy paths and critical cross-boundary integrations (e.g., login session persistence across page reloads, webhook ingestion persisting to database and rendering in UI, and hard security/RBAC route guards). Never duplicate component-level test cases (e.g. search filters, modal open/close permutations, validation message variations) in Playwright. For all E2E testing tasks, delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
 * **DRY Principle & Function Reusability (Strict Requirement)**: Never duplicate the same logic, schemas, field markup, queries, or utility helpers twice. Instead, use a function, custom hook, base schema, or reusable subcomponent and follow the DRY principle. Keep a single source of truth for all repeated behavior across the entire codebase.
 * **Memory Maintenance**: Keep this file (`agy-memory.md`) updated with all key milestones, architectural shifts, and completed tasks.
 
@@ -108,6 +108,12 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ### 5.7 E2E Testing Instructions (`playwright-e2e` Subagent)
 * **Dedicated Agent**: Delegate all E2E test creation, updates, execution, and debugging to the specialized `playwright-e2e` subagent ([`.agents/agents/playwright-e2e/agent.md`](.agents/agents/playwright-e2e/agent.md)).
+* **Testing Scope & Philosophy (Use E2E Only When Strictly Necessary)**:
+  - **Do NOT duplicate component tests in E2E**: Filtering variations, search input debouncing, dropdown open/close states, modal lifecycles, validation error messages, and badge color permutations belong strictly in component tests (`React Testing Library + Vitest`).
+  - **Reserve E2E strictly for**:
+    1. Critical happy-path user journeys (e.g. login -> session persistence across reloads -> dashboard).
+    2. End-to-end cross-system integrations (e.g. inbound webhook -> PostgreSQL DB persistence -> verified on UI).
+    3. Strict security/RBAC boundaries (e.g. non-admin navigation attempts to `/users` blocked and redirected).
 * **Strict Database Isolation**:
   * All E2E tests must run against the dedicated test database `helpdesk_test` on PostgreSQL port `5433` (via backend port `5001` and frontend port `5174`).
   * **NEVER** run tests against or mutate the development database `helpdesk` (ports `5000` / `5173`).
@@ -143,6 +149,9 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - The shared `queryClient` (`client/src/lib/query-client.ts`) is configured to suppress automatic retries on `401 Unauthorized`, `403 Forbidden`, and `404 Not Found` errors.
 
 ### 5.9 Component & Unit Testing Guidelines (React Testing Library + Vitest)
+* **Primary Testing Tier**:
+  - Rely primarily on component tests for all UI logic, user interactions, search/filtering, tab switching, sorting, modal states, validation errors, and badge styling.
+  - Component tests run fast in jsdom with zero network latency, giving deterministic and immediate regression protection.
 * **Testing Stack & Environment**:
   - **Runner**: **Vitest** configured in [`client/vitest.config.ts`](client/vitest.config.ts) with `environment: "jsdom"`, `@vitejs/plugin-react`, and workspace package deduplication.
   - **DOM & Assertions**: **React Testing Library** (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and `@testing-library/user-event`.
@@ -585,6 +594,47 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Client Vitest Tests (`bun run test:unit`): **60 / 60 passed**.
   - Playwright E2E Tests (`bunx playwright test e2e/tickets/inbound-email.spec.ts`): **6 / 6 passed** (including new test verifying `TicketCategory` enum persistence).
   - Production Builds: Server (`tsc`) and Client (`tsc -b && vite build`) compiled cleanly with 0 errors.
+
+---
+
+### Milestone 19: Ticket List Feature (Sorted Newest First)
+- **Backend Architecture (`server/src/features/tickets/`)**:
+  - `ticket.service.ts`: Updated `getAllTickets` to order by `createdAt: "desc"` (newest first) by default, and support optional filtering by `status`, `category`, `search` query, or explicit `sort` ("newest" | "oldest").
+  - `ticket.schema.ts`: Added `ticketQuerySchema` with Zod validation for query parameters.
+  - `ticket.controller.ts`: Updated `getTickets` to parse query parameters and return 400 for malformed filters.
+  - Server unit tests (`ticket.service.test.ts`): Added 3 tests validating newest-first ordering, category filtering, and multi-field text search.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - `types/index.ts`: Strongly typed interfaces (`TicketItem`, `TicketFilters`, `StatusFilter`, `CategoryFilter`, `SortFilter`).
+  - `api/tickets.api.ts`: Centralized Axios methods (`getTickets`, `getTicketById`).
+  - `hooks/useTickets.ts`: TanStack Query hook managing caching, background sync, and error states.
+  - `components/TicketStatusBadge.tsx`: Visual status indicators for `OPEN`, `RESOLVED`, `CLOSED`.
+  - `components/TicketPriorityBadge.tsx`: Visual priority indicators for `LOW`, `MEDIUM`, `HIGH`.
+  - `components/TicketCategoryBadge.tsx`: Category tags for `GENERAL_QUESTION`, `TECHNICAL_QUESTION`, `REFUND_REQUEST`, and `Uncategorized`.
+  - `components/TicketStatsCards.tsx`: Summary cards for Total, Open, Resolved, and Closed tickets.
+  - `components/TicketsFilter.tsx`: Search input with clear button, Status tabs with counts, Category dropdown, and Sort selector.
+  - `components/TicketsTable.tsx`: Full responsive table rendering tickets ordered newest first with customer details, badges, formatted dates, skeleton loading, and empty states.
+  - `pages/TicketsPage.tsx`: Full page orchestrator.
+  - `Navbar.tsx` & `App.tsx`: Added "Tickets" navigation link for all authenticated users (agents and admins), mounted `/tickets`.
+- **Verification**:
+  - Server Unit Tests (`bun test server/src/features/tickets/__tests__/`): **27 / 27 passed**.
+  - Client Vitest Tests (`bun run test:unit`): **67 / 67 passed** across 10 test files.
+  - Playwright E2E Tests: Added `e2e/tickets/ticket-list.spec.ts` validating newest-first ordering and route protection.
+  - Production Builds: Server (`tsc`) and Client (`tsc -b && vite build`) compile with 0 errors.
+
+---
+
+### Milestone 20: Ticket Route Separation & Component-First Test Realignment
+- **Route Isolation & Dashboard Separation**:
+  - Isolated the full tickets table and management view strictly to `/tickets` (`TicketsPage.tsx`).
+  - Restored `/` strictly as the HomePage / Dashboard.
+  - Navigation bar cleanly separates Dashboard (`/`), Tickets (`/tickets`), and Admin Users (`/users`).
+- **Test Suite Optimization (Component-First Strategy)**:
+  - Pruned redundant UI search and filter tests from Playwright E2E (`e2e/tickets/ticket-list.spec.ts`), keeping only essential happy-path ordering and route protection.
+  - Migrated search, filtering, and tab switching test coverage to thorough Vitest + React Testing Library component tests in `client/src/features/tickets/__tests__/TicketsPage.test.tsx`.
+  - Client component test suite: **73 / 73 passing** across 10 test suites.
+  - Playwright E2E test suite: Streamlined to **45 / 45 passing** focused on critical integration and security paths.
+- **Project Memory Policy**:
+  - Formalized strict policy: Going forward, rely mostly on component tests (React Testing Library + Vitest) for UI logic, filters, sorting, form validation, and states. Use Playwright E2E only when strictly necessary for critical cross-boundary workflows and security boundaries.
 
 ---
 
