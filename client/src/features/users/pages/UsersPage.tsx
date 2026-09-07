@@ -8,6 +8,7 @@ import { UsersFilter } from "../components/UsersFilter";
 import { UsersTable } from "../components/UsersTable";
 import { CreateUserModal } from "../components/CreateUserModal";
 import { EditUserModal } from "../components/EditUserModal";
+import { DeleteUserModal } from "../components/DeleteUserModal";
 import type { UserItem, RoleFilter } from "../types";
 
 export function UsersPage() {
@@ -15,6 +16,7 @@ export function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
 
   const {
     users,
@@ -134,6 +136,7 @@ export function UsersPage() {
         searchQuery={searchQuery}
         onClearSearch={() => setSearchQuery("")}
         onEditUser={setEditingUser}
+        onDeleteUser={setDeletingUser}
       />
 
       {/* Modals */}
@@ -146,6 +149,12 @@ export function UsersPage() {
         user={editingUser}
         isOpen={!!editingUser}
         onClose={() => setEditingUser(null)}
+      />
+
+      <DeleteUserModal
+        user={deletingUser}
+        isOpen={!!deletingUser}
+        onClose={() => setDeletingUser(null)}
       />
     </div>
   );

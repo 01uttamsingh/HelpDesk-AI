@@ -23,7 +23,7 @@ function handleControllerError(
 }
 
 /**
- * Controller to list all platform users.
+ * Controller to list all active platform users.
  * Accessible only to authenticated users with ADMIN role.
  */
 export async function listUsers(
@@ -105,5 +105,31 @@ export async function updateUser(
     });
   } catch (error: any) {
     handleControllerError(error, res, next, "updateUser controller");
+  }
+}
+
+/**
+ * Controller to soft delete an existing user.
+ * Admin users cannot be deleted.
+ * Accessible only to authenticated users with ADMIN role.
+ */
+export async function deleteUser(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "User ID is required",
+      });
+    }
+
+    const result = await userService.deleteUser(id);
+    return res.status(200).json(result);
+  } catch (error: any) {
+    handleControllerError(error, res, next, "deleteUser controller");
   }
 }

@@ -7,6 +7,7 @@ import {
   Mail,
   Calendar,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface UsersTableProps {
   searchQuery: string;
   onClearSearch: () => void;
   onEditUser: (user: UserItem) => void;
+  onDeleteUser: (user: UserItem) => void;
 }
 
 export function UsersTable({
@@ -27,6 +29,7 @@ export function UsersTable({
   searchQuery,
   onClearSearch,
   onEditUser,
+  onDeleteUser,
 }: UsersTableProps) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
@@ -194,16 +197,42 @@ export function UsersTable({
 
                     {/* Actions */}
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => onEditUser(user)}
-                        aria-label={`Edit ${user.name}`}
-                        data-testid={`edit-user-${user.id}`}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => onEditUser(user)}
+                          aria-label={`Edit ${user.name}`}
+                          data-testid={`edit-user-${user.id}`}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+
+                        {isAdmin ? (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            disabled
+                            aria-label="Cannot delete admin user"
+                            title="Administrators cannot be deleted"
+                            className="text-muted-foreground/30 cursor-not-allowed"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => onDeleteUser(user)}
+                            aria-label={`Delete ${user.name}`}
+                            data-testid={`delete-user-${user.id}`}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

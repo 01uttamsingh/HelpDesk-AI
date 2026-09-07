@@ -682,6 +682,55 @@ describe("UsersPage Component", () => {
       expect(getSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe("10. Delete User Modal Integration", () => {
+    it("disables delete button for admin but allows agent deletion with confirmation", async () => {
+      const user = userEvent.setup();
+      const getSpy = vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+      const deleteSpy = vi.spyOn(api, "delete").mockResolvedValue({
+        data: { success: true, message: "User deleted successfully" },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Admin Alice")).toBeInTheDocument();
+      });
+
+      // Admin delete button should be disabled
+      const adminDeleteBtn = screen.getByRole("button", { name: "Cannot delete admin user" });
+      expect(adminDeleteBtn).toBeDisabled();
+
+      // Agent delete button should be enabled
+      const agentDeleteBtn = screen.getByRole("button", { name: "Delete Bob Agent" });
+      expect(agentDeleteBtn).toBeEnabled();
+
+      // Click delete on agent
+      await user.click(agentDeleteBtn);
+
+      // Confirmation modal should open
+      expect(screen.getByRole("heading", { name: "Delete User" })).toBeInTheDocument();
+      expect(screen.getAllByText("Bob Agent").length).toBeGreaterThanOrEqual(2);
+
+      // Confirm deletion
+      const confirmDeleteBtn = screen.getByRole("button", { name: /^Delete User$/i });
+      await user.click(confirmDeleteBtn);
+
+      await waitFor(() => {
+        expect(deleteSpy).toHaveBeenCalledWith(`/api/users/${mockUsers[1].id}`);
+      });
+
+      // Modal closes
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Delete User" })).not.toBeInTheDocument();
+      });
+
+      // Triggers query invalidation refetch
+      expect(getSpy).toHaveBeenCalledTimes(2);
+    });
+  });
 });
 
 

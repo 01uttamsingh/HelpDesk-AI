@@ -501,6 +501,46 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 16: User Deletion with Confirmation Modal, Admin Protection & Soft Deletion (Full-Stack)
+- **Database Schema & Migrations**:
+  - Added `deletedAt DateTime? @map("deleted_at")` and `@@index([deletedAt])` to `User` in `server/prisma/schema.prisma`.
+  - Created migration `20260907120000_add_deleted_at_to_user` and applied it to both `helpdesk` and `helpdesk_test`.
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma`)**:
+  - `server/src/features/users/user.types.ts`: Added `deletedAt?: Date | null` to `SafeUser`.
+  - `server/src/features/users/user.service.ts`:
+    - Updated `safeUserSelect` projection to include `deletedAt: true`.
+    - `getAllUsers()` filters out soft-deleted accounts (`where: { deletedAt: null }`).
+    - `updateUser()` validates user exists and is not soft-deleted.
+    - `deleteUser(id)`: validates user exists, blocks admin deletion (`if (user.role === Role.ADMIN) throw new UserServiceError("Administrators cannot be deleted", 400)`), and atomically executes `prisma.$transaction` setting `deletedAt = now()` and deleting active Better Auth sessions (`tx.session.deleteMany({ where: { userId: id } })`).
+  - `server/src/features/users/user.controller.ts`: Added `deleteUser` handler utilizing centralized `handleControllerError`.
+  - `server/src/features/users/user.routes.ts`: Mounted `DELETE /:id` under `requireAdmin`.
+  - `server/src/features/auth/auth.ts`:
+    - Added `deletedAt` to Better Auth additional fields.
+    - In `hooks.before`, blocked soft-deleted accounts from logging in by throwing `new APIError("UNAUTHORIZED", { message: "This account has been deactivated." })`.
+  - `server/src/features/auth/auth.middleware.ts`: Verified active user is not soft-deleted in `requireAuth`.
+- **Frontend Architecture (`client/src/features/users/`)**:
+  - `types/index.ts`: Added `deletedAt?: string | null` to `UserItem`.
+  - `api/users.api.ts`: Added `deleteUser(id: string)` API method.
+  - `hooks/useDeleteUser.ts`: Mutation hook calling `deleteUser` and invalidating `["users"]` cache.
+  - `components/DeleteUserModal.tsx`: Confirmation modal dialog featuring target user's name/email, destructive styling, confirmation action with spinner, and error alert via `getErrorMessage`.
+  - `components/UsersTable.tsx`: Added `onDeleteUser` prop; rendered disabled delete button with `title="Administrators cannot be deleted"` for Admin rows and enabled delete button for Agent rows.
+  - `pages/UsersPage.tsx`: Added `deletingUser` state and rendered `<DeleteUserModal>`.
+  - `features/users/index.ts`: Exported `DeleteUserModal` and `useDeleteUser`.
+- **Testing & Verification**:
+  - Vitest Unit Tests:
+    - Updated `UsersTable.test.tsx` verifying disabled admin button and enabled agent delete trigger.
+    - Created `DeleteUserModal.test.tsx` (6 tests) verifying modal rendering, dismissal (Cancel, Escape, backdrop), mutation dispatch, and error handling.
+    - Updated `UsersPage.test.tsx` verifying full delete flow integration.
+    - **66 / 66 Vitest tests passed** across 7 test files.
+  - Playwright E2E Tests:
+    - Created `e2e/users/delete-user.spec.ts` (9 tests) covering modal lifecycle, admin deletion prevention (UI disabled + 400 Bad Request API), successful soft deletion and UI removal, login prevention for deactivated user, and RBAC / security boundaries.
+    - **50 / 50 Playwright E2E tests passed** across all 5 test files.
+  - Production Builds:
+    - Server: `tsc` compiled cleanly with exit code 0.
+    - Client: `tsc -b && vite build` built cleanly with exit code 0.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -530,14 +570,14 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── pages/       # LoginPage
 │   │   │   │   └── index.ts     # Auth barrel export
 │   │   │   └── users/           # User management feature module
-│   │   │       ├── api/         # users.api.ts (Axios calls)
-│   │   │       ├── components/  # UserStatsCards, UsersFilter, UsersTable, PasswordField, CreateUserModal, EditUserModal
-│   │   │       ├── hooks/       # useUsers, useCreateUser, useUpdateUser
+│   │   │       ├── api/         # users.api.ts (Axios calls: getUsers, createUser, updateUser, deleteUser)
+│   │   │       ├── components/  # UserStatsCards, UsersFilter, UsersTable, PasswordField, CreateUserModal, EditUserModal, DeleteUserModal
+│   │   │       ├── hooks/       # useUsers, useCreateUser, useUpdateUser, useDeleteUser
 │   │   │       ├── pages/       # UsersPage.tsx orchestrator
 │   │   │       ├── schemas/     # user.schema.ts (DRY Zod schemas)
 │   │   │       ├── types/       # UserItem, RoleFilter, inputs
 │   │   │       ├── utils/       # getErrorMessage helper
-│   │   │       ├── __tests__/   # 6 unit/integration test suites
+│   │   │       ├── __tests__/   # 7 unit/integration test suites
 │   │   │       └── index.ts     # Users barrel export
 │   │   ├── lib/                 # Shared core utilities (api.ts, query-client.ts, utils.ts)
 │   │   ├── pages/               # Cross-cutting root pages & backward-compat re-exports
@@ -557,8 +597,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │
 ├── server/                      # Express + TypeScript (Bun)
 │   ├── prisma/
-│   │   ├── migrations/          # Applied database migrations
-│   │   ├── schema.prisma        # Prisma schema
+│   │   ├── migrations/          # Applied database migrations (including soft delete)
+│   │   ├── schema.prisma        # Prisma schema (User with deletedAt)
 │   │   └── seed.ts              # Admin user seed script
 │   ├── src/
 │   │   ├── config/env.ts        # Environment validator
@@ -600,6 +640,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── users/
 │   │   ├── create-user.spec.ts  # User creation, modal validation, persistence & login tests
 │   │   ├── edit-user.spec.ts    # User editing, password management & RBAC protection tests
+│   │   ├── delete-user.spec.ts  # User deletion, confirmation modal, admin protection & deactivation tests
 │   │   └── users-list.spec.ts   # Admin user list, search, filters & RBAC protection tests
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)

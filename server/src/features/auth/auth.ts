@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
-import { createAuthMiddleware } from "better-auth/api";
+import { createAuthMiddleware, APIError } from "better-auth/api";
 import prisma from "../../prisma";
 import { env, getTrustedOrigins } from "../../config/env";
 
@@ -16,6 +16,11 @@ export const auth = betterAuth({
         type: "string",
         required: false,
         defaultValue: "AGENT",
+        input: false,
+      },
+      deletedAt: {
+        type: "date",
+        required: false,
         input: false,
       },
     },
@@ -40,6 +45,23 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx: any) => {
       if (ctx.body && typeof ctx.body.email === "string") {
         ctx.body.email = ctx.body.email.trim().toLowerCase();
+      }
+
+      // Prohibit soft-deleted users from logging in
+      if (
+        ctx.path.startsWith("/sign-in") &&
+        ctx.body &&
+        typeof ctx.body.email === "string"
+      ) {
+        const user = await prisma.user.findUnique({
+          where: { email: ctx.body.email },
+          select: { deletedAt: true },
+        });
+        if (user?.deletedAt) {
+          throw new APIError("UNAUTHORIZED", {
+            message: "This account has been deactivated.",
+          });
+        }
       }
     }),
   },

@@ -31,14 +31,19 @@ export const safeUserSelect = {
   image: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 } as const;
 
 /**
- * Retrieves all registered users from the database.
+ * Retrieves all registered active users from the database.
+ * Filters out soft-deleted users (where deletedAt is null).
  * Sorted by role (Admins first) and creation date descending.
  */
 export async function getAllUsers(): Promise<SafeUser[]> {
   return prisma.user.findMany({
+    where: {
+      deletedAt: null,
+    },
     select: safeUserSelect,
     orderBy: [
       { role: "asc" },
@@ -89,7 +94,7 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
 }
 
 /**
- * Updates an existing user's details.
+ * Updates an existing active user's details.
  * If password is provided, hashes it and updates the linked credential account.
  * Otherwise, leaves the user's password unchanged.
  */
@@ -101,7 +106,7 @@ export async function updateUser(
     where: { id },
   });
 
-  if (!existingUser) {
+  if (!existingUser || existingUser.deletedAt) {
     throw new UserServiceError("User not found", 404);
   }
 
@@ -153,4 +158,44 @@ export async function updateUser(
       select: safeUserSelect,
     });
   });
+}
+
+/**
+ * Soft deletes an existing user and terminates their active sessions.
+ * Admins cannot be deleted under any circumstances.
+ */
+export async function deleteUser(
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!user || user.deletedAt) {
+    throw new UserServiceError("User not found", 404);
+  }
+
+  if (user.role === Role.ADMIN) {
+    throw new UserServiceError("Administrators cannot be deleted", 400);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Soft-delete user by stamping deletedAt
+    await tx.user.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    // 2. Immediately revoke all active sessions for this user
+    await tx.session.deleteMany({
+      where: { userId: id },
+    });
+  });
+
+  return {
+    success: true,
+    message: "User deleted successfully",
+  };
 }

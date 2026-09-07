@@ -9,6 +9,7 @@ export interface SafeUser {
   image: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface CreateUserInput {

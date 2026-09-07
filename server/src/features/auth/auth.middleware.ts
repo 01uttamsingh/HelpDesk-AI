@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth";
+import prisma from "../../prisma";
 
 export interface AuthenticatedUser {
   id: string;
@@ -41,6 +42,19 @@ export async function requireAuth(
       return res.status(401).json({
         success: false,
         error: "Unauthorized: Authentication required",
+      });
+    }
+
+    // Verify user is not soft-deleted
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { deletedAt: true },
+    });
+
+    if (dbUser?.deletedAt) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized: Account has been deactivated",
       });
     }
 

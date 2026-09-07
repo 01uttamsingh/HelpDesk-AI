@@ -28,7 +28,7 @@ const mockUsers: UserItem[] = [
 ];
 
 describe("UsersTable Component", () => {
-  it("renders table with headers, rows, badges, and edit buttons", () => {
+  it("renders table with headers, rows, badges, edit buttons, and delete buttons", () => {
     render(
       <UsersTable
         users={mockUsers}
@@ -36,6 +36,7 @@ describe("UsersTable Component", () => {
         searchQuery=""
         onClearSearch={vi.fn()}
         onEditUser={vi.fn()}
+        onDeleteUser={vi.fn()}
       />
     );
 
@@ -52,6 +53,14 @@ describe("UsersTable Component", () => {
 
     expect(screen.getByTestId("edit-user-user-1")).toBeInTheDocument();
     expect(screen.getByTestId("edit-user-user-2")).toBeInTheDocument();
+
+    // Admin delete button is disabled
+    const adminDeleteBtn = screen.getByRole("button", { name: "Cannot delete admin user" });
+    expect(adminDeleteBtn).toBeDisabled();
+    expect(adminDeleteBtn).toHaveAttribute("title", "Administrators cannot be deleted");
+
+    // Agent delete button is enabled
+    expect(screen.getByTestId("delete-user-user-2")).toBeInTheDocument();
   });
 
   it("calls onEditUser when clicking the edit button", async () => {
@@ -65,11 +74,31 @@ describe("UsersTable Component", () => {
         searchQuery=""
         onClearSearch={vi.fn()}
         onEditUser={handleEditUser}
+        onDeleteUser={vi.fn()}
       />
     );
 
     await user.click(screen.getByTestId("edit-user-user-1"));
     expect(handleEditUser).toHaveBeenCalledWith(mockUsers[0]);
+  });
+
+  it("calls onDeleteUser when clicking the delete button for agent user", async () => {
+    const user = userEvent.setup();
+    const handleDeleteUser = vi.fn();
+
+    render(
+      <UsersTable
+        users={mockUsers}
+        isLoading={false}
+        searchQuery=""
+        onClearSearch={vi.fn()}
+        onEditUser={vi.fn()}
+        onDeleteUser={handleDeleteUser}
+      />
+    );
+
+    await user.click(screen.getByTestId("delete-user-user-2"));
+    expect(handleDeleteUser).toHaveBeenCalledWith(mockUsers[1]);
   });
 
   it("renders empty state when users array is empty", () => {
@@ -80,6 +109,7 @@ describe("UsersTable Component", () => {
         searchQuery=""
         onClearSearch={vi.fn()}
         onEditUser={vi.fn()}
+        onDeleteUser={vi.fn()}
       />
     );
 
@@ -97,6 +127,7 @@ describe("UsersTable Component", () => {
         searchQuery="nonexistent"
         onClearSearch={handleClearSearch}
         onEditUser={vi.fn()}
+        onDeleteUser={vi.fn()}
       />
     );
 

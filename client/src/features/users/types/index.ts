@@ -7,6 +7,7 @@ export interface UserItem {
   image: string | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 }
 
 export type RoleFilter = "ALL" | "ADMIN" | "AGENT";

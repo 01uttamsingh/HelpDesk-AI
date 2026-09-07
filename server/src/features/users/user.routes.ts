@@ -9,7 +9,7 @@ router.use(requireAdmin);
 
 /**
  * GET /api/users
- * Returns list of all platform users (Admins & Agents).
+ * Returns list of all active platform users (Admins & Agents).
  * Restricted to ADMIN role.
  */
 router.get("/", userController.listUsers);
@@ -27,5 +27,12 @@ router.post("/", userController.createUser);
  * Restricted to ADMIN role.
  */
 router.patch("/:id", userController.updateUser);
+
+/**
+ * DELETE /api/users/:id
+ * Soft deletes an existing user and revokes their sessions.
+ * Restricted to ADMIN role (Admin users cannot be deleted).
+ */
+router.delete("/:id", userController.deleteUser);
 
 export default router;
