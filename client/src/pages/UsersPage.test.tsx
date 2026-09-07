@@ -557,6 +557,48 @@ describe("UsersPage Component", () => {
         expect(screen.queryByRole("heading", { name: "Create New User" })).not.toBeInTheDocument();
       });
     });
+
+    it("closes modal when pressing the Escape key", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      expect(screen.getByRole("heading", { name: "Create New User" })).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Create New User" })).not.toBeInTheDocument();
+      });
+    });
+
+    it("closes modal when clicking outside on the backdrop", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      expect(screen.getByRole("heading", { name: "Create New User" })).toBeInTheDocument();
+
+      const backdrop = document.querySelector('[data-slot="dialog-backdrop"]');
+      expect(backdrop).toBeInTheDocument();
+
+      await user.click(backdrop as HTMLElement);
+
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Create New User" })).not.toBeInTheDocument();
+      });
+    });
   });
+
 });
 

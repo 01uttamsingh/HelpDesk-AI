@@ -369,23 +369,29 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
     - Added "Create User" action button with `UserPlus` icon in header above the user list.
     - Integrated `CreateUserModal` with controlled visibility state.
 - **Component & Unit Testing (React Testing Library + Vitest)**:
-  - Added 7 comprehensive test scenarios in `client/src/pages/UsersPage.test.tsx` (20/20 tests passing):
-    - Modal opening via "Create User" button.
-    - Validation for name (< 3 chars), email format, and password (< 8 chars).
-    - Successful submission with `POST /api/users`, query invalidation, and modal dismissal.
-    - Server error alert rendering on 409 duplicate email.
-    - Cancel button dismissal and form reset.
+  - Added dedicated unit test suite for `CreateUserModal` in `client/src/components/CreateUserModal.test.tsx` (11 tests):
+    - Rendering when `isOpen: true` and unmounting when `isOpen: false`.
+    - Dismissal via Cancel button, Escape key, and clicking outside on the backdrop.
+    - Password visibility toggling between password and text.
+    - Field validations (name < 3, invalid email, password < 8).
+    - Submission handling with `POST /api/users`, query cache invalidation, and modal dismissal.
+    - Server error alert rendering on API rejection.
+  - Added 9 integration test scenarios in `client/src/pages/UsersPage.test.tsx` (22 tests).
+  - Total Vitest component/unit tests: **33 / 33 passed**.
 - **E2E Testing (Playwright against `helpdesk_test`)**:
-  - Authored comprehensive 6-test suite in `e2e/users/create-user.spec.ts`:
-    - Modal opening and client-side validation triggers.
+  - Authored comprehensive 8-test suite in `e2e/users/create-user.spec.ts`:
+    - Modal opening, Cancel button dismissal, **Escape key dismissal**, and **outside backdrop click dismissal**.
+    - Client-side validation triggers (name, email, password).
     - Admin user creation flow, modal dismissal, and table row verification with Agent badge.
     - Authentication verification: Newly created user logs in with their credentials and verifies non-admin access restrictions.
     - Duplicate email conflict error handling.
     - RBAC API protection: 401 Unauthorized for unauthenticated requests and 403 Forbidden for agent requests to `POST /api/users`.
 - **Verification**:
-  - `bun run test:e2e`: **30/30 tests passed** (14 auth + 10 user list + 6 create user) in 43.1s.
-  - `bun run test:component`: **20/20 tests passed** in Vitest.
+  - `bun run test:e2e`: **32/32 tests passed** (14 auth + 10 user list + 8 create user).
+  - `bun run test:component`: **33/33 tests passed** in Vitest (2 test files).
   - Full TypeScript build: `bun run build:server` and `bun run build:client` compile with zero errors.
+
+
 
 ---
 
@@ -407,8 +413,10 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   └── skeleton.tsx # Skeleton loading placeholder component
 │   │   │   ├── AdminRoute.tsx   # Admin-only route guard
 │   │   │   ├── CreateUserModal.tsx # User creation modal dialog with Zod validation
+│   │   │   ├── CreateUserModal.test.tsx # Unit tests for modal dialog (11 tests)
 │   │   │   ├── Navbar.tsx       # Navigation bar with role-aware nav & sign out
 │   │   │   └── ProtectedRoute.tsx # Route protection with role checks & login redirect
+
 │   │   ├── context/
 │   │   │   ├── AuthContext.ts   # Session context & useSession hook
 │   │   │   └── AuthProvider.tsx # Session provider fetching from DB

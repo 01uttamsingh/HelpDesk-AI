@@ -44,6 +44,46 @@ test.describe("User Creation & Validation Flows", () => {
       await signOutViaUI(page);
     });
 
+    test("closes modal when pressing the Escape key", async ({ page }) => {
+      // 1. Open modal
+      await page.getByRole("button", { name: /create user/i }).click();
+      await expect(
+        page.getByRole("heading", { name: "Create New User" })
+      ).toBeVisible();
+
+      // 2. Press Escape key
+      await page.keyboard.press("Escape");
+
+      // 3. Verify modal is dismissed
+      await expect(
+        page.getByRole("heading", { name: "Create New User" })
+      ).not.toBeVisible();
+
+      await signOutViaUI(page);
+    });
+
+    test("closes modal when clicking outside on the backdrop", async ({ page }) => {
+      // 1. Open modal
+      await page.getByRole("button", { name: /create user/i }).click();
+      await expect(
+        page.getByRole("heading", { name: "Create New User" })
+      ).toBeVisible();
+
+      // 2. Click outside (backdrop element)
+      const backdrop = page.locator('[data-slot="dialog-backdrop"]');
+      await expect(backdrop).toBeVisible();
+      // Click at top-left corner of viewport outside the modal
+      await backdrop.click({ position: { x: 10, y: 10 } });
+
+      // 3. Verify modal is dismissed
+      await expect(
+        page.getByRole("heading", { name: "Create New User" })
+      ).not.toBeVisible();
+
+      await signOutViaUI(page);
+    });
+
+
     test("enforces validation rules for name (>=3 chars), email (valid), and password (>=8 chars)", async ({
       page,
     }) => {
