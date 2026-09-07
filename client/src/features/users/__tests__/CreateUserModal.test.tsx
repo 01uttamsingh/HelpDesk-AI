@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError, AxiosHeaders } from "axios";
-import { CreateUserModal } from "./CreateUserModal";
+import { CreateUserModal } from "../components/CreateUserModal";
 import { api } from "@/lib/api";
 import { renderWithQuery, createTestQueryClient } from "@/test/renderWithQuery";
 

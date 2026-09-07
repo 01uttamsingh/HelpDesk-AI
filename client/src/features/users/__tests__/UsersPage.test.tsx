@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError, AxiosHeaders } from "axios";
-import { UsersPage, type UserItem } from "./UsersPage";
+import { UsersPage, type UserItem } from "../index";
 import { api } from "@/lib/api";
 import { renderWithQuery, createTestQueryClient } from "@/test/renderWithQuery";
 
@@ -66,10 +66,11 @@ describe("UsersPage Component", () => {
       const table = screen.getByTestId("users-table");
       const skeletons = table.querySelectorAll('[data-slot="skeleton"]');
       expect(skeletons.length).toBeGreaterThan(0);
-      // 4 rows * 6 skeleton elements = 24 skeletons
-      expect(skeletons.length).toBe(24);
+      // 4 rows * 7 skeleton elements = 28 skeletons (including Actions column)
+      expect(skeletons.length).toBe(28);
     });
   });
+
 
   describe("2. Successful User List Rendering", () => {
     it("renders page header, summary statistics, and user details in table", async () => {
@@ -600,5 +601,87 @@ describe("UsersPage Component", () => {
     });
   });
 
+  describe("9. Edit User Modal Integration", () => {
+    it("renders edit button with pencil icon on each user row", async () => {
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Admin Alice")).toBeInTheDocument();
+      });
+
+      expect(screen.getByRole("button", { name: "Edit Admin Alice" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Edit Bob Agent" })).toBeInTheDocument();
+    });
+
+    it("opens edit modal pre-populated with user data when edit button is clicked", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bob Agent")).toBeInTheDocument();
+      });
+
+      const editBtn = screen.getByRole("button", { name: "Edit Bob Agent" });
+      await user.click(editBtn);
+
+      expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Name")).toHaveValue("Bob Agent");
+      expect(screen.getByLabelText("Email")).toHaveValue("bob.agent@example.com");
+      expect(screen.getByLabelText("Password")).toHaveValue("");
+    });
+
+    it("submits updated details and refetches users list upon saving", async () => {
+      const user = userEvent.setup();
+      const getSpy = vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+      const patchSpy = vi.spyOn(api, "patch").mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            ...mockUsers[1],
+            name: "Bob Senior Agent",
+          },
+        },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Bob Agent")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Edit Bob Agent" }));
+
+      const nameInput = screen.getByLabelText("Name");
+      await user.clear(nameInput);
+      await user.type(nameInput, "Bob Senior Agent");
+
+      const saveBtn = screen.getByRole("button", { name: /save changes/i });
+      await user.click(saveBtn);
+
+      await waitFor(() => {
+        expect(patchSpy).toHaveBeenCalledWith(`/api/users/${mockUsers[1].id}`, {
+          name: "Bob Senior Agent",
+          email: "bob.agent@example.com",
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Edit User" })).not.toBeInTheDocument();
+      });
+
+      expect(getSpy).toHaveBeenCalledTimes(2);
+    });
+  });
 });
+
 

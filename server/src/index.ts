@@ -2,12 +2,11 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
-import { auth } from "./auth";
+import { auth, requireAuth, AuthenticatedRequest } from "./features/auth";
 import prisma from "./prisma";
 import { env, getTrustedOrigins } from "./config/env";
-import { requireAuth, AuthenticatedRequest } from "./middleware/auth.middleware";
 import adminRoutes from "./routes/admin.routes";
-import userRoutes from "./routes/user.routes";
+import { userRoutes } from "./features/users";
 
 // Prevent Bun event loop idle exit on Windows
 setInterval(() => {}, 1000 * 60 * 60);

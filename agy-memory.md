@@ -55,6 +55,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **Client Data Fetching (Axios & TanStack Query)**: Always use the preconfigured **Axios** client (`client/src/lib/api.ts`) and **TanStack Query** (`useQuery`, `useMutation`) for client-side API requests and server-state management. Never use raw `window.fetch()` for backend API calls.
 * **Component & Unit Testing (React Testing Library + Vitest)**: Write component tests alongside UI features using React Testing Library (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and the custom `renderWithQuery` wrapper ([`client/src/test/renderWithQuery.tsx`](client/src/test/renderWithQuery.tsx)). Ensure mock isolation via `vi.resetAllMocks()` and `vi.restoreAllMocks()` in `beforeEach`. Run via `bun run test:component` (or `bun run test:unit`).
 * **E2E Testing with `playwright-e2e` Subagent**: For all end-to-end testing tasks (authoring tests, running suites, diagnosing test failures), delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
+* **DRY Principle & Function Reusability (Strict Requirement)**: Never duplicate the same logic, schemas, field markup, queries, or utility helpers twice. Instead, use a function, custom hook, base schema, or reusable subcomponent and follow the DRY principle. Keep a single source of truth for all repeated behavior across the entire codebase.
 * **Memory Maintenance**: Keep this file (`agy-memory.md`) updated with all key milestones, architectural shifts, and completed tasks.
 
 ---
@@ -166,6 +167,26 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Single run (client workspace): `bun run --cwd client test:component` (or `bun run --cwd client test`).
   - Interactive watch mode: `bun run --cwd client test:component:watch`.
   - Single run from root: `bun run test:component` (or `bun run test:unit`).
+
+### 5.10 DRY (Don't Repeat Yourself) & Modularization Conventions
+* **Core Rule**: **Do not duplicate the same thing twice**. Always use a function, custom hook, shared schema, or reusable component instead. Keep a single source of truth across the entire codebase.
+* **Backend DRY**:
+  - **Shared Zod Schemas**: Define base reusable schema primitives (e.g., `userNameSchema`, `userEmailSchema`, `userPasswordSchema`, `optionalUserPasswordSchema`) and compose them into request schemas.
+  - **Shared Service Utilities & Selectors**: Centralize recurring data transformations (e.g., `normalizeEmail(email)`) and Prisma field projections (e.g., `safeUserSelect`) into reusable functions and constants.
+  - **Centralized Controller Error Handling**: Use helper functions (e.g., `handleControllerError`) rather than repeating identical status checking and try/catch boilerplate across controllers.
+* **Frontend DRY**:
+  - **Feature-Based Modularization**: Organize code domain-by-domain under `src/features/<feature-name>/` containing:
+    - `api/`: API service calls using the centralized Axios client (`users.api.ts`).
+    - `types/`: Shared TypeScript interfaces and types (`index.ts`).
+    - `schemas/`: Shared Zod validation schemas (`user.schema.ts`).
+    - `hooks/`: Domain-specific TanStack Query hooks (`useUsers`, `useCreateUser`, `useUpdateUser`).
+    - `components/`: Granular, reusable UI components (`UserStatsCards`, `UsersFilter`, `UsersTable`, `PasswordField`).
+    - `pages/`: Feature orchestrator pages (`UsersPage.tsx`).
+    - `utils/`: Reusable feature helpers (`error.ts`).
+    - `__tests__/`: Co-located component and integration test suites.
+    - `index.ts`: Clean feature barrel export.
+  - **Reusable Form Primitives**: Extract repeating form controls (e.g., `PasswordField` with show/hide password toggle) to avoid duplicating input markup, state, and accessibility attributes.
+  - **Reusable Error Formatting**: Use a centralized `getErrorMessage(err, fallback)` helper for extracting API error messages across forms.
 
 ---
 
@@ -391,7 +412,92 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - `bun run test:component`: **33/33 tests passed** in Vitest (2 test files).
   - Full TypeScript build: `bun run build:server` and `bun run build:client` compile with zero errors.
 
+### Milestone 14: User Editing & Password Management (Full-Stack & E2E)
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma Client`)**:
+  - `server/src/services/user.service.ts`:
+    - Added `UpdateUserInput` interface (`name?`, `email?`, `password?`).
+    - Added `updateUser(id, input)` service function using `prisma.$transaction`.
+    - Handles email normalization and collision checks (throws 409 if email is in use by another user).
+    - Checks user existence (throws 404 if not found).
+    - If `password` is provided, hashes it using `hashPassword` (`better-auth/crypto`) and updates/upserts the credential `Account` record. If `password` is omitted/undefined, existing password and accounts remain untouched.
+    - Updates user fields (`name`, `email`) and returns projected `SafeUser`.
+  - `server/src/controllers/user.controller.ts`:
+    - Added `updateUserSchema` (Zod) validating optional `name` (min 3), optional `email` (valid email format), and optional `password` (min 8 chars).
+    - Added `updateUser` controller handler. Validates `id` URL param, executes service, and returns `200 OK` with `{ success: true, data: user }`.
+  - `server/src/routes/user.routes.ts`:
+    - Registered `PATCH /api/users/:id` guarded by `requireAdmin`.
+- **Frontend UI & Modal Component**:
+  - `client/src/components/EditUserModal.tsx`:
+    - Modal dialog displaying Name, Email, and Password fields.
+    - Pre-populates Name and Email with the selected user's current values when opened (`useEffect` / `reset`).
+    - Password field defaults empty with placeholder: `"Leave blank to keep current password"`.
+    - Password visibility toggle (`Eye` / `EyeOff` icons).
+    - React Hook Form + Zod client validation (`editUserSchema`) enforcing name (min 3 chars), valid email, and optional password (if entered, min 8 chars).
+    - Server error alert displaying API/conflict errors.
+    - TanStack Query mutation calling `PATCH /api/users/:id`, invalidating `queryKey: ["users"]` on success, closing the dialog and refreshing the user list.
+  - `client/src/pages/UsersPage.tsx`:
+    - Added `editingUser` state (`SafeUser | null`).
+    - Added "Actions" column to table header and rows.
+    - In each user row, added an Edit button with `Pencil` icon (`data-testid="edit-user-${user.id}"`).
+    - Integrated `<EditUserModal>` to control dialog visibility based on `editingUser`.
+- **Component & Unit Testing (React Testing Library + Vitest)**:
+  - Authored `client/src/components/EditUserModal.test.tsx` (12 tests):
+    - Pre-population of Name and Email fields.
+    - Rendering when `isOpen: true` and unmounting when `isOpen: false`.
+    - Dismissal via Cancel button, Escape key, and backdrop clicks.
+    - Password visibility toggle.
+    - Validation error checks (name < 3, invalid email, password < 8).
+    - Successful submission without password (sending `{ name, email }`).
+    - Successful submission with password (sending `{ name, email, password }`).
+    - Server error alert rendering on API rejection (e.g. 409 email already in use).
+  - Updated `client/src/pages/UsersPage.test.tsx` (25 tests):
+    - Adjusted skeleton loading count for the new Actions column (28 skeletons across 4 rows).
+    - Added tests for clicking Edit button opening modal and submitting edit updates.
+  - Vitest component/unit tests: **48 / 48 passed** across 3 test files.
+- **E2E Testing (Playwright against `helpdesk_test`)**:
+  - Authored comprehensive 9-test suite in `e2e/users/edit-user.spec.ts`:
+    - Modal opening with pre-populated fields and Cancel button dismissal.
+    - Escape key dismissal and outside backdrop click dismissal.
+    - Form validation rules for name, email, and password.
+    - Conflict handling: Attempting to update to an existing user's email displays error alert.
+    - User editing without password change: Updates user name and verifies login persists with original password.
+    - User editing with password change: Updates user password and verifies login with the new password.
+    - RBAC API security boundaries: Rejects unauthenticated PATCH with 401 and Agent user PATCH with 403.
+- **Verification**:
+  - `bun run test:e2e`: **41 / 41 tests passed** (auth, users-list, create-user, edit-user).
+  - `bun run --cwd client test`: **48 / 48 tests passed** in Vitest.
+  - `bun run --cwd server build` and `bun run --cwd client build`: Both compile with zero TypeScript errors.
 
+### Milestone 15: Feature-Based Modularization & DRY Architecture Refactoring (Full-Stack)
+- **Architecture Transformation**:
+  - Reorganized both frontend and backend from scattered flat/type-based directories into structured feature modules (`features/auth` and `features/users`) following Bulletproof React conventions.
+  - **Backend (`server/src/features/`)**:
+    - `features/auth/`: Encapsulated Better Auth server configuration (`auth.ts`), RBAC middleware (`auth.middleware.ts`), and barrel export (`index.ts`).
+    - `features/users/`: Modularized `user.routes.ts`, `user.controller.ts`, `user.service.ts`, `user.schema.ts`, `user.types.ts`, and barrel export (`index.ts`).
+    - Maintained full backward compatibility with lightweight re-exports in legacy paths.
+  - **Frontend (`client/src/features/`)**:
+    - `features/auth/`: Context (`AuthContext.ts`, `AuthProvider.tsx`), route guards (`ProtectedRoute.tsx`, `AdminRoute.tsx`), auth client (`lib/auth-client.ts`), login view (`pages/LoginPage.tsx`), and barrel export (`index.ts`).
+    - `features/users/`:
+      - `api/users.api.ts`: Centralized Axios requests (`getUsers`, `createUser`, `updateUser`).
+      - `types/index.ts`: Strongly typed interfaces (`UserItem`, `RoleFilter`, `CreateUserInput`, `UpdateUserInput`).
+      - `schemas/user.schema.ts`: Single source of truth for Zod validation schemas (`userNameSchema`, `userEmailSchema`, `userPasswordSchema`, `createUserSchema`, `editUserSchema`).
+      - `hooks/`: Custom TanStack Query hooks (`useUsers`, `useCreateUser`, `useUpdateUser`).
+      - `components/`: Granular extracted components (`UserStatsCards`, `UsersFilter`, `UsersTable`, `PasswordField`, `CreateUserModal`, `EditUserModal`).
+      - `pages/UsersPage.tsx`: Lean orchestrator page composing modular components and hooks.
+      - `utils/error.ts`: Shared error message extractor (`getErrorMessage`).
+      - `__tests__/`: Co-located Vitest test suites (6 test files).
+      - `index.ts`: Feature barrel export.
+- **DRY Principle Enforcement**:
+  - Replaced duplicated password visibility toggle state and UI markup with reusable `<PasswordField>` component.
+  - Composed client and server Zod schemas from reusable primitive validators (`userNameSchema`, `userEmailSchema`, `userPasswordSchema`).
+  - Extracted shared Prisma field projection `safeUserSelect` eliminating repetitive `select` definitions in `user.service.ts`.
+  - Extracted `normalizeEmail(email)` helper function ensuring consistent email normalization.
+  - Extracted `handleControllerError` helper in `user.controller.ts` standardizing API error responses.
+  - Extracted `getErrorMessage` on client for consistent error unwrapping across modals.
+- **Verification**:
+  - Vitest Unit Tests: **57 / 57 tests passed** across 6 test files.
+  - Playwright E2E Tests: **41 / 41 tests passed** against `helpdesk_test`.
+  - Production Builds: `bun run --cwd server build` and `bun run --cwd client build` completed cleanly with exit code 0.
 
 ---
 
@@ -400,47 +506,52 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ```text
 ├── client/                      # React + Vite + TypeScript (Bun)
 │   ├── src/
-│   │   ├── components/
+│   │   ├── components/          # Truly shared / application-wide UI
 │   │   │   ├── ui/              # shadcn UI components (Base UI primitives)
 │   │   │   │   ├── alert.tsx
-│   │   │   │   ├── badge.tsx    # Role & status badge component
+│   │   │   │   ├── badge.tsx
 │   │   │   │   ├── button.tsx
 │   │   │   │   ├── card.tsx
-│   │   │   │   ├── dialog.tsx   # Accessible Dialog modal primitives (@base-ui/react)
+│   │   │   │   ├── dialog.tsx
 │   │   │   │   ├── input.tsx
 │   │   │   │   ├── label.tsx
 │   │   │   │   ├── separator.tsx
-│   │   │   │   └── skeleton.tsx # Skeleton loading placeholder component
-│   │   │   ├── AdminRoute.tsx   # Admin-only route guard
-│   │   │   ├── CreateUserModal.tsx # User creation modal dialog with Zod validation
-│   │   │   ├── CreateUserModal.test.tsx # Unit tests for modal dialog (11 tests)
-│   │   │   ├── Navbar.tsx       # Navigation bar with role-aware nav & sign out
-│   │   │   └── ProtectedRoute.tsx # Route protection with role checks & login redirect
-
-│   │   ├── context/
-│   │   │   ├── AuthContext.ts   # Session context & useSession hook
-│   │   │   └── AuthProvider.tsx # Session provider fetching from DB
-│   │   ├── lib/
-│   │   │   ├── api.ts           # Centralized Axios client instance (withCredentials: true)
-│   │   │   ├── auth-client.ts   # Better Auth client instance
-│   │   │   ├── query-client.ts  # TanStack QueryClient with auth retry suppression
-│   │   │   └── utils.ts         # shadcn cn utility function
-│   │   ├── pages/
-│   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
-│   │   │   ├── LoginPage.tsx    # Sign-in form styled with shadcn components
-│   │   │   ├── UsersPage.tsx    # Admin user management dashboard with Create User
-│   │   │   └── UsersPage.test.tsx # React Testing Library component tests (20 tests)
-│   │   ├── test/
-│   │   │   ├── renderWithQuery.tsx # Custom render wrapper providing QueryClientProvider
-│   │   │   ├── setup.ts         # Vitest DOM setup & cleanup
-│   │   │   └── test-utils.tsx   # Re-exports test helpers & utilities
-│   │   ├── App.tsx              # Main App layout, ProtectedRoute & Router
+│   │   │   │   └── skeleton.tsx
+│   │   │   ├── AdminRoute.tsx   # Backward-compatibility re-export from features/auth
+│   │   │   ├── CreateUserModal.tsx # Backward-compatibility re-export from features/users
+│   │   │   ├── EditUserModal.tsx   # Backward-compatibility re-export from features/users
+│   │   │   ├── Navbar.tsx       # Global navigation bar with auth awareness
+│   │   │   └── ProtectedRoute.tsx # Backward-compatibility re-export from features/auth
+│   │   ├── features/            # Feature-based domain modules
+│   │   │   ├── auth/            # Authentication feature module
+│   │   │   │   ├── components/  # ProtectedRoute, AdminRoute
+│   │   │   │   ├── context/     # AuthContext, AuthProvider
+│   │   │   │   ├── lib/         # Better Auth client instance
+│   │   │   │   ├── pages/       # LoginPage
+│   │   │   │   └── index.ts     # Auth barrel export
+│   │   │   └── users/           # User management feature module
+│   │   │       ├── api/         # users.api.ts (Axios calls)
+│   │   │       ├── components/  # UserStatsCards, UsersFilter, UsersTable, PasswordField, CreateUserModal, EditUserModal
+│   │   │       ├── hooks/       # useUsers, useCreateUser, useUpdateUser
+│   │   │       ├── pages/       # UsersPage.tsx orchestrator
+│   │   │       ├── schemas/     # user.schema.ts (DRY Zod schemas)
+│   │   │       ├── types/       # UserItem, RoleFilter, inputs
+│   │   │       ├── utils/       # getErrorMessage helper
+│   │   │       ├── __tests__/   # 6 unit/integration test suites
+│   │   │       └── index.ts     # Users barrel export
+│   │   ├── lib/                 # Shared core utilities (api.ts, query-client.ts, utils.ts)
+│   │   ├── pages/               # Cross-cutting root pages & backward-compat re-exports
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── LoginPage.tsx
+│   │   │   └── UsersPage.tsx
+│   │   ├── test/                # Shared test wrappers (renderWithQuery.tsx, setup.ts)
+│   │   ├── App.tsx              # Root application router & providers
 │   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme
 │   │   └── main.tsx             # Entry point
-│   ├── components.json          # shadcn configuration (base-nova, neutral)
-│   ├── vite.config.ts           # Vite config with @ alias, configurable test port & proxy
-│   ├── vitest.config.ts         # Vitest config with JSDOM & React aliases
-│   ├── tsconfig.app.json        # TS app config with @/* path alias
+│   ├── components.json
+│   ├── vite.config.ts
+│   ├── vitest.config.ts
+│   ├── tsconfig.app.json
 │   ├── tsconfig.json
 │   └── package.json
 │
@@ -448,25 +559,23 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── prisma/
 │   │   ├── migrations/          # Applied database migrations
 │   │   ├── schema.prisma        # Prisma schema
-│   │   └── seed.ts              # Admin user seed script (supports test db)
+│   │   └── seed.ts              # Admin user seed script
 │   ├── src/
-│   │   ├── auth.ts              # Better Auth server configuration
-│   │   ├── config/env.ts        # Environment validator (supports test env)
-│   │   ├── controllers/
-│   │   │   └── user.controller.ts # User management handlers (listUsers, createUser)
-│   │   ├── middleware/
-│   │   │   └── auth.middleware.ts # requireAuth & requireAdmin RBAC
-│   │   ├── prisma.ts            # Prisma client instance (supports test db)
-│   │   ├── routes/
-│   │   │   ├── admin.routes.ts  # Legacy admin routes (/api/admin)
-│   │   │   └── user.routes.ts   # User management routes (/api/users GET & POST)
-│   │   ├── services/
-│   │   │   └── user.service.ts  # User queries, creation & safe data projections
+│   │   ├── config/env.ts        # Environment validator
+│   │   ├── features/            # Feature-based domain modules
+│   │   │   ├── auth/            # Auth feature: auth.ts, auth.middleware.ts
+│   │   │   └── users/           # Users feature: routes, controller, service, schema, types
+│   │   ├── middleware/          # Backward-compatibility auth.middleware.ts
+│   │   ├── routes/              # Backward-compatibility admin.routes.ts & user.routes.ts
+│   │   ├── controllers/         # Backward-compatibility user.controller.ts
+│   │   ├── services/            # Backward-compatibility user.service.ts
+│   │   ├── prisma.ts            # Shared Prisma client instance
+│   │   ├── auth.ts              # Backward-compatibility re-export
 │   │   └── index.ts             # Express server connected to PostgreSQL
-│   ├── .env                     # Local Postgres on port 5433 (helpdesk)
-│   ├── .env.test                # Local Postgres on port 5433 (helpdesk_test)
+│   ├── .env
+│   ├── .env.test
 │   ├── .env.example
-│   ├── prisma.config.ts         # Prisma CLI configuration
+│   ├── prisma.config.ts
 │   ├── tsconfig.json
 │   └── package.json
 │
@@ -475,10 +584,10 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── playwright-e2e/      # Specialized E2E testing subagent
 │   │   │   └── agent.md
 │   │   └── security-reviewer/   # Application security audit subagent
-│   │       └── agent.md
-│   └── skills/
-│       └── better-auth-best-practices/
-│           └── SKILL.md
+│   │   │   └── agent.md
+│   │   └── skills/
+│   │       └── better-auth-best-practices/
+│   │           └── SKILL.md
 │
 ├── e2e/                         # Centralized Playwright test suite & test artifacts
 │   ├── auth/
@@ -490,6 +599,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
 │   ├── users/
 │   │   ├── create-user.spec.ts  # User creation, modal validation, persistence & login tests
+│   │   ├── edit-user.spec.ts    # User editing, password management & RBAC protection tests
 │   │   └── users-list.spec.ts   # Admin user list, search, filters & RBAC protection tests
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)

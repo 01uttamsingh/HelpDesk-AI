@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LifeBuoy, LogIn, LogOut, User, Loader2 } from "lucide-react";
-import { useSession } from "../context/AuthContext";
-import { signOut } from "../lib/auth-client";
+import { useSession, signOut } from "@/features/auth";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
