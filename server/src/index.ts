@@ -7,6 +7,7 @@ import prisma from "./prisma";
 import { env, getTrustedOrigins } from "./config/env";
 import adminRoutes from "./routes/admin.routes";
 import { userRoutes } from "./features/users";
+import { webhookRoutes, ticketRoutes } from "./features/tickets";
 
 // Prevent Bun event loop idle exit on Windows
 setInterval(() => {}, 1000 * 60 * 60);
@@ -109,6 +110,9 @@ app.get("/api/me", requireAuth, (req: AuthenticatedRequest, res: Response) => {
 app.use("/api/admin", adminRoutes);
 // Standard REST endpoint for user management (Admin only)
 app.use("/api/users", userRoutes);
+// Inbound email webhooks and ticket management endpoints
+app.use("/api/webhooks", webhookRoutes);
+app.use("/api/tickets", ticketRoutes);
 
 // Centralized error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

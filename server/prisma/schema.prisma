@@ -20,9 +20,10 @@ model User {
   role          Role      @default(AGENT)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime? @map("deleted_at")
-  sessions      Session[]
-  accounts      Account[]
+  deletedAt       DateTime? @map("deleted_at")
+  sessions        Session[]
+  accounts        Account[]
+  assignedTickets Ticket[]
 
   @@unique([email])
   @@index([deletedAt])
@@ -78,3 +79,46 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+enum TicketStatus {
+  OPEN
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketCategory {
+  GENERAL_QUESTION
+  TECHNICAL_QUESTION
+  REFUND_REQUEST
+}
+
+model Ticket {
+  id           Int             @id @default(autoincrement())
+  subject      String
+  body         String
+  htmlBody     String?         @map("html_body")
+  senderName   String          @map("sender_name")
+  senderEmail  String          @map("sender_email")
+  status       TicketStatus    @default(OPEN)
+  priority     TicketPriority  @default(MEDIUM)
+  category     TicketCategory?
+  messageId    String?         @map("message_id")
+  assignedToId String?         @map("assigned_to_id")
+  assignedTo   User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  @@index([senderEmail])
+  @@index([status])
+  @@index([category])
+  @@index([assignedToId])
+  @@index([messageId])
+  @@map("tickets")
+}
+

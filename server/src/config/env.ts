@@ -38,6 +38,7 @@ const envSchema = z.object({
     .url("CLIENT_URL must be a valid URL")
     .default("http://localhost:5173"),
   TRUSTED_ORIGINS: z.string().optional(),
+  SUPPORT_EMAIL: z.string().email().default("support@helpdesk.local"),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -541,6 +541,53 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 17: Inbound Email to Ticket Conversion (Single Model, Integer ID, Optional Category)
+- **Database Schema & Architecture**:
+  - Adopted a clean **single-model architecture**: consolidated all required columns into `Ticket` (no separate `Message` or `Category` tables).
+  - Configured auto-incrementing integer primary key: `id Int @id @default(autoincrement())`.
+  - Configured `senderName String @map("sender_name")` as a required non-null column.
+  - Configured `category String?` as an optional column with **no default value** (ready for future AI classification).
+  - Merged email content columns: `body`, `htmlBody`, `messageId`, `senderEmail`, `subject`, `status` (`OPEN`, `RESOLVED`, `CLOSED`), and `priority` (`LOW`, `MEDIUM`, `HIGH`).
+  - Added `assignedTickets Ticket[]` relation to `User`.
+  - Created migration `20260907074742_create_tickets_table` and deployed cleanly to both `helpdesk` and test database `helpdesk_test`.
+- **Backend Modular Architecture (`server/src/features/tickets/`)**:
+  - `ticket.types.ts`: Strongly typed interfaces (`InboundEmailPayload`, `ParsedEmailAddress`, `CreateTicketInput`).
+  - `ticket.schema.ts`: Zod schema `inboundEmailSchema` validating webhook inputs and `ticketIdParamSchema` validating integer route params.
+  - `ticket.utils.ts`: Reusable utilities (DRY) for RFC 5322 sender parsing (`parseEmailAddress`), fallback name derivation (`deriveNameFromEmail`), and subject sanitization (`cleanSubject`).
+  - `ticket-ingest.service.ts`: `ingestInboundEmail` persisting new tickets with auto-increment ID, required sender name, and null category.
+  - `ticket.service.ts`: Queries for retrieving tickets by integer ID (`getTicketById`) and listing all tickets (`getAllTickets`).
+  - `ticket.controller.ts`: Webhook handler `handleInboundEmail` and retrieval handlers.
+  - `ticket.routes.ts`: Mounted public webhook `POST /api/webhooks/email` and authenticated routes `GET /api/tickets`, `GET /api/tickets/:id`.
+  - Mounted in `server/src/index.ts`.
+- **Verification**:
+  - Server Unit Tests (`bun test server/src/features/tickets/__tests__/`): **15 / 15 passed** (11 in `ticket.utils.test.ts`, 4 in `ticket-ingest.service.test.ts`).
+  - Client Vitest Tests (`bun run test:unit`): **60 / 60 passed**.
+  - Playwright E2E Tests (`bun run test:e2e`): **42 / 42 passed** (including 5 new E2E tests in `e2e/tickets/inbound-email.spec.ts`).
+  - Production Builds: Server (`tsc`) and Client (`tsc -b && vite build`) built cleanly with 0 errors.
+
+---
+
+### Milestone 18: TicketCategory Enum Definition & Database Migration
+- **Schema & Database Layer**:
+  - Defined `enum TicketCategory` in `server/prisma/schema.prisma`:
+    - `GENERAL_QUESTION`: For general support and course inquiries.
+    - `TECHNICAL_QUESTION`: For technical bugs, video player, and system issues.
+    - `REFUND_REQUEST`: For billing, payments, and refund inquiries.
+  - Updated `Ticket.category` from `String?` to `TicketCategory?` (maintaining optional status with no default value).
+  - Preserved `@@index([category])` for optimal filtering performance.
+  - Generated and executed migration `20260907081724_change_ticket_category_to_enum` on both `helpdesk` and `helpdesk_test`.
+- **Backend Modular Layer (`server/src/features/tickets/`)**:
+  - `ticket.types.ts`: Re-exported `TicketCategory` from `@prisma/client` and updated `CreateTicketInput` and `InboundEmailPayload`.
+  - `ticket.schema.ts`: Created `ticketCategorySchema` with robust `normalizeCategory` preprocessor that maps variants (e.g. `"Technical Questions"`, `"technical_question"`, `"General Question"`, `"Refund request"`) into canonical `TicketCategory` enum values.
+  - `ticket-ingest.service.ts`: Updated to persist optional `payload.category` when provided, defaulting to `null` when omitted.
+- **Verification**:
+  - Server Unit Tests (`bun test server/src/features/tickets/__tests__/`): **24 / 24 passed** (including new `ticket.schema.test.ts`).
+  - Client Vitest Tests (`bun run test:unit`): **60 / 60 passed**.
+  - Playwright E2E Tests (`bunx playwright test e2e/tickets/inbound-email.spec.ts`): **6 / 6 passed** (including new test verifying `TicketCategory` enum persistence).
+  - Production Builds: Server (`tsc`) and Client (`tsc -b && vite build`) compiled cleanly with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -604,7 +651,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── config/env.ts        # Environment validator
 │   │   ├── features/            # Feature-based domain modules
 │   │   │   ├── auth/            # Auth feature: auth.ts, auth.middleware.ts
-│   │   │   └── users/           # Users feature: routes, controller, service, schema, types
+│   │   │   ├── users/           # Users feature: routes, controller, service, schema, types
+│   │   │   └── tickets/         # Tickets feature: routes, controller, services, schema, types, utils
 │   │   ├── middleware/          # Backward-compatibility auth.middleware.ts
 │   │   ├── routes/              # Backward-compatibility admin.routes.ts & user.routes.ts
 │   │   ├── controllers/         # Backward-compatibility user.controller.ts
@@ -637,6 +685,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   └── auth.ts              # Test credentials and UI action helpers
 │   ├── scripts/
 │   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
+│   ├── tickets/
+│   │   └── inbound-email.spec.ts # Webhook ingestion, single model, integer ID, senderName, category
 │   ├── users/
 │   │   ├── user-crud.spec.ts    # Consolidated happy-path CRUD operations (Create, Read, Update, Delete)
 │   │   ├── create-user.spec.ts  # Backend duplicate email conflict & POST RBAC security boundaries
