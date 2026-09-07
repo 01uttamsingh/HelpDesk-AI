@@ -638,10 +638,11 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── scripts/
 │   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
 │   ├── users/
-│   │   ├── create-user.spec.ts  # User creation, modal validation, persistence & login tests
-│   │   ├── edit-user.spec.ts    # User editing, password management & RBAC protection tests
-│   │   ├── delete-user.spec.ts  # User deletion, confirmation modal, admin protection & deactivation tests
-│   │   └── users-list.spec.ts   # Admin user list, search, filters & RBAC protection tests
+│   │   ├── user-crud.spec.ts    # Consolidated happy-path CRUD operations (Create, Read, Update, Delete)
+│   │   ├── create-user.spec.ts  # Backend duplicate email conflict & POST RBAC security boundaries
+│   │   ├── edit-user.spec.ts    # Backend duplicate email conflict, password retention & PATCH RBAC
+│   │   ├── delete-user.spec.ts  # Administrator protection & DELETE RBAC security boundaries
+│   │   └── users-list.spec.ts   # Data refresh, empty search state, agent protection & legacy API
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)
 ├── playwright.config.ts         # Playwright config (outputDir & reporter in e2e/)
