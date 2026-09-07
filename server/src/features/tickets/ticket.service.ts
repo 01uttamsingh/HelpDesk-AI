@@ -47,11 +47,24 @@ export class TicketService {
       ];
     }
 
-    const sortOrder: Prisma.SortOrder = query?.sort === "oldest" ? "asc" : "desc";
+    let orderBy: Prisma.TicketOrderByWithRelationInput[];
+
+    if (query?.sortBy) {
+      const order: Prisma.SortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+      orderBy = [
+        { [query.sortBy]: order },
+        ...(query.sortBy !== "id" ? [{ id: "desc" as Prisma.SortOrder }] : []),
+      ];
+    } else if (query?.sort === "oldest") {
+      orderBy = [{ createdAt: "asc" }, { id: "asc" }];
+    } else {
+      // Default: newest first
+      orderBy = [{ createdAt: "desc" }, { id: "desc" }];
+    }
 
     return prisma.ticket.findMany({
       where,
-      orderBy: { createdAt: sortOrder },
+      orderBy,
       include: {
         assignedTo: {
           select: {

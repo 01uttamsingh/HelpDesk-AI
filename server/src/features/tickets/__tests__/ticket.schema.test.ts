@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { inboundEmailSchema, normalizeCategory } from "../ticket.schema";
+import { inboundEmailSchema, normalizeCategory, ticketQuerySchema } from "../ticket.schema";
 import { TicketCategory } from "@prisma/client";
 
 describe("ticket.schema", () => {
@@ -70,6 +70,55 @@ describe("ticket.schema", () => {
           category: "INVALID_CAT",
         })
       ).toThrow();
+    });
+  });
+
+  describe("ticketQuerySchema", () => {
+    it("parses valid sortBy and sortOrder parameters", () => {
+      const parsed = ticketQuerySchema.parse({
+        sortBy: "priority",
+        sortOrder: "asc",
+      });
+      expect(parsed.sortBy).toBe("priority");
+      expect(parsed.sortOrder).toBe("asc");
+    });
+
+    it("parses all allowed sortBy fields", () => {
+      const allowedFields = [
+        "createdAt",
+        "priority",
+        "status",
+        "category",
+        "subject",
+        "senderName",
+        "senderEmail",
+        "id",
+      ] as const;
+
+      allowedFields.forEach((field) => {
+        const parsed = ticketQuerySchema.parse({ sortBy: field });
+        expect(parsed.sortBy).toBe(field);
+      });
+    });
+
+    it("rejects invalid sortBy field", () => {
+      expect(() =>
+        ticketQuerySchema.parse({ sortBy: "unsupported_field" })
+      ).toThrow();
+    });
+
+    it("rejects invalid sortOrder value", () => {
+      expect(() =>
+        ticketQuerySchema.parse({ sortOrder: "sideways" })
+      ).toThrow();
+    });
+
+    it("supports legacy sort parameter", () => {
+      const parsedOldest = ticketQuerySchema.parse({ sort: "oldest" });
+      expect(parsedOldest.sort).toBe("oldest");
+
+      const parsedNewest = ticketQuerySchema.parse({ sort: "newest" });
+      expect(parsedNewest.sort).toBe("newest");
     });
   });
 });

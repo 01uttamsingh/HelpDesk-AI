@@ -78,6 +78,74 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await signOutViaUI(page);
   });
 
+  test("sorts tickets on server when clicking column header", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+
+    // 1. Create first (older) ticket
+    const oldSubject = `Old Ticket E2E [${timestamp}]`;
+    const res1 = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Student One <student1.${timestamp}@example.com>`,
+        subject: oldSubject,
+        text: "Older ticket text.",
+      },
+    });
+    expect(res1.status()).toBe(201);
+    const { data: ticket1 } = await res1.json();
+
+    await page.waitForTimeout(100);
+
+    // 2. Create second (newer) ticket
+    const newSubject = `New Ticket E2E [${timestamp}]`;
+    const res2 = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Student Two <student2.${timestamp}@example.com>`,
+        subject: newSubject,
+        text: "Newer ticket text.",
+      },
+    });
+    expect(res2.status()).toBe(201);
+    const { data: ticket2 } = await res2.json();
+
+    // 3. Login and go to /tickets
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto("/tickets");
+    await expect(page.getByRole("heading", { name: /^tickets$/i })).toBeVisible();
+
+    const rowNewer = page.getByTestId(`ticket-row-${ticket2.id}`);
+    const rowOlder = page.getByTestId(`ticket-row-${ticket1.id}`);
+    await expect(rowNewer).toBeVisible();
+    await expect(rowOlder).toBeVisible();
+
+    // 4. By default, newest is first
+    let allRows = page.locator("[data-testid^='ticket-row-']");
+    let rowTexts = await allRows.allTextContents();
+    let indexNewer = rowTexts.findIndex((t) => t.includes(newSubject));
+    let indexOlder = rowTexts.findIndex((t) => t.includes(oldSubject));
+    expect(indexNewer).toBeLessThan(indexOlder);
+
+    // 5. Click the "Created" column header to sort ascending (oldest first)
+    const createdHeader = page.getByTestId("sort-header-createdAt");
+    await createdHeader.click();
+
+    // Verify sort asc indicator is present
+    await expect(page.getByTestId("sort-asc-createdAt")).toBeVisible();
+
+    // Verify older ticket is now before newer ticket
+    await expect(async () => {
+      const updatedTexts = await page.locator("[data-testid^='ticket-row-']").allTextContents();
+      const updatedIndexNewer = updatedTexts.findIndex((t) => t.includes(newSubject));
+      const updatedIndexOlder = updatedTexts.findIndex((t) => t.includes(oldSubject));
+      expect(updatedIndexOlder).toBeLessThan(updatedIndexNewer);
+    }).toPass();
+
+    await signOutViaUI(page);
+  });
+
   test("redirects unauthenticated visitor from /tickets to /login", async ({
     page,
   }) => {

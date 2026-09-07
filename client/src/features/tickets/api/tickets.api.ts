@@ -26,7 +26,13 @@ export async function getTickets(filters?: TicketFilters): Promise<TicketItem[]>
     params.search = filters.search.trim();
   }
 
-  if (filters?.sort) {
+  if (filters?.sortBy) {
+    params.sortBy = filters.sortBy;
+  }
+
+  if (filters?.sortOrder) {
+    params.sortOrder = filters.sortOrder;
+  } else if (filters?.sort) {
     params.sort = filters.sort;
   }
 

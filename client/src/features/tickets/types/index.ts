@@ -33,9 +33,23 @@ export type StatusFilter = "ALL" | TicketStatus;
 export type CategoryFilter = "ALL" | TicketCategory | "UNCATEGORIZED";
 export type SortFilter = "newest" | "oldest";
 
+export type TicketSortField =
+  | "createdAt"
+  | "priority"
+  | "status"
+  | "category"
+  | "subject"
+  | "senderName"
+  | "senderEmail"
+  | "id";
+
+export type TicketSortOrder = "asc" | "desc";
+
 export interface TicketFilters {
   status?: StatusFilter;
   category?: CategoryFilter;
   search?: string;
   sort?: SortFilter;
+  sortBy?: TicketSortField;
+  sortOrder?: TicketSortOrder;
 }

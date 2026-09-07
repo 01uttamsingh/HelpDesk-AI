@@ -108,4 +108,68 @@ describe("TicketsTable", () => {
     await user.click(clearBtn);
     expect(handleClear).toHaveBeenCalledTimes(1);
   });
+
+  it("renders sortable column headers with appropriate sort indicators", () => {
+    render(
+      <TicketsTable
+        tickets={mockTickets}
+        isLoading={false}
+        searchQuery=""
+        hasActiveFilters={false}
+        onClearFilters={vi.fn()}
+        sorting={[{ id: "createdAt", desc: true }]}
+        onSortingChange={vi.fn()}
+      />
+    );
+
+    // Created is sorted descending
+    expect(screen.getByTestId("sort-header-createdAt")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-desc-createdAt")).toBeInTheDocument();
+
+    // Priority is unsorted
+    expect(screen.getByTestId("sort-header-priority")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-none-priority")).toBeInTheDocument();
+
+    // Subject (Ticket) is unsorted
+    expect(screen.getByTestId("sort-header-subject")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-none-subject")).toBeInTheDocument();
+  });
+
+  it("renders ascending sort indicator when column is sorted asc", () => {
+    render(
+      <TicketsTable
+        tickets={mockTickets}
+        isLoading={false}
+        searchQuery=""
+        hasActiveFilters={false}
+        onClearFilters={vi.fn()}
+        sorting={[{ id: "priority", desc: false }]}
+        onSortingChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("sort-asc-priority")).toBeInTheDocument();
+  });
+
+  it("calls onSortingChange when a column header is clicked", async () => {
+    const user = userEvent.setup();
+    const handleSortingChange = vi.fn();
+
+    render(
+      <TicketsTable
+        tickets={mockTickets}
+        isLoading={false}
+        searchQuery=""
+        hasActiveFilters={false}
+        onClearFilters={vi.fn()}
+        sorting={[{ id: "createdAt", desc: true }]}
+        onSortingChange={handleSortingChange}
+      />
+    );
+
+    const priorityHeader = screen.getByTestId("sort-header-priority");
+    await user.click(priorityHeader);
+
+    expect(handleSortingChange).toHaveBeenCalledTimes(1);
+  });
 });

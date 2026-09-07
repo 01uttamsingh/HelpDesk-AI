@@ -28,11 +28,25 @@ export interface CreateTicketInput {
   messageId?: string | null;
 }
 
+export type TicketSortField =
+  | "createdAt"
+  | "priority"
+  | "status"
+  | "category"
+  | "subject"
+  | "senderName"
+  | "senderEmail"
+  | "id";
+
+export type TicketSortOrder = "asc" | "desc";
+
 export interface TicketFilterQuery {
   status?: TicketStatus;
-  category?: TicketCategory;
+  category?: TicketCategory | null;
   search?: string;
   sort?: "newest" | "oldest";
+  sortBy?: TicketSortField;
+  sortOrder?: TicketSortOrder;
 }
 
 export type { Ticket, TicketStatus, TicketPriority, TicketCategory };

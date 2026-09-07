@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import type { SortingState } from "@tanstack/react-table";
 import { Ticket, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -6,46 +7,63 @@ import { useTickets } from "../hooks/useTickets";
 import { TicketStatsCards } from "../components/TicketStatsCards";
 import { TicketsFilter } from "../components/TicketsFilter";
 import { TicketsTable } from "../components/TicketsTable";
-import type { StatusFilter, CategoryFilter, SortFilter } from "../types";
+import type {
+  StatusFilter,
+  CategoryFilter,
+  SortFilter,
+  TicketSortField,
+  TicketSortOrder,
+} from "../types";
 
 export function TicketsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("ALL");
-  const [sortFilter, setSortFilter] = useState<SortFilter>("newest");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "createdAt", desc: true },
+  ]);
 
-  const { tickets, isLoading, isFetching, errorMessage, refetch } = useTickets();
+  // Derive sort parameters for server query
+  const sortBy = (sorting[0]?.id as TicketSortField) || "createdAt";
+  const sortOrder: TicketSortOrder = sorting[0]?.desc ? "desc" : "asc";
 
-  // Filter and sort tickets (newest first by default)
+  // Derive legacy sortFilter value for the dropdown selector
+  const sortFilter: SortFilter =
+    sortBy === "createdAt" && !sorting[0]?.desc ? "oldest" : "newest";
+
+  const handleSortFilterChange = (newSort: SortFilter) => {
+    setSorting([{ id: "createdAt", desc: newSort === "newest" }]);
+  };
+
+  const { tickets, isLoading, isFetching, errorMessage, refetch } = useTickets({
+    sortBy,
+    sortOrder,
+  });
+
+  // Filter tickets (sorting is handled on the server)
   const filteredTickets = useMemo(() => {
-    return tickets
-      .filter((t) => {
-        const matchesStatus =
-          statusFilter === "ALL" || t.status === statusFilter;
+    return tickets.filter((t) => {
+      const matchesStatus =
+        statusFilter === "ALL" || t.status === statusFilter;
 
-        const matchesCategory =
-          categoryFilter === "ALL"
-            ? true
-            : categoryFilter === "UNCATEGORIZED"
-            ? !t.category
-            : t.category === categoryFilter;
+      const matchesCategory =
+        categoryFilter === "ALL"
+          ? true
+          : categoryFilter === "UNCATEGORIZED"
+          ? !t.category
+          : t.category === categoryFilter;
 
-        const q = searchQuery.trim().toLowerCase();
-        const matchesSearch =
-          !q ||
-          t.subject?.toLowerCase().includes(q) ||
-          t.body?.toLowerCase().includes(q) ||
-          t.senderName?.toLowerCase().includes(q) ||
-          t.senderEmail?.toLowerCase().includes(q);
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        t.subject?.toLowerCase().includes(q) ||
+        t.body?.toLowerCase().includes(q) ||
+        t.senderName?.toLowerCase().includes(q) ||
+        t.senderEmail?.toLowerCase().includes(q);
 
-        return matchesStatus && matchesCategory && matchesSearch;
-      })
-      .sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return sortFilter === "oldest" ? dateA - dateB : dateB - dateA;
-      });
-  }, [tickets, statusFilter, categoryFilter, searchQuery, sortFilter]);
+      return matchesStatus && matchesCategory && matchesSearch;
+    });
+  }, [tickets, statusFilter, categoryFilter, searchQuery]);
 
   // Ticket counts across whole dataset
   const totalCount = tickets.length;
@@ -57,13 +75,14 @@ export function TicketsPage() {
     searchQuery.trim().length > 0 ||
     statusFilter !== "ALL" ||
     categoryFilter !== "ALL" ||
-    sortFilter !== "newest";
+    sortBy !== "createdAt" ||
+    !sorting[0]?.desc;
 
   const handleClearFilters = () => {
     setSearchQuery("");
     setStatusFilter("ALL");
     setCategoryFilter("ALL");
-    setSortFilter("newest");
+    setSorting([{ id: "createdAt", desc: true }]);
   };
 
   return (
@@ -132,20 +151,22 @@ export function TicketsPage() {
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         sortFilter={sortFilter}
-        onSortFilterChange={setSortFilter}
+        onSortFilterChange={handleSortFilterChange}
         totalCount={totalCount}
         openCount={openCount}
         resolvedCount={resolvedCount}
         closedCount={closedCount}
       />
 
-      {/* Tickets Table (Sorted Newest First) */}
+      {/* Tickets Table */}
       <TicketsTable
         tickets={filteredTickets}
         isLoading={isLoading}
         searchQuery={searchQuery}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={handleClearFilters}
+        sorting={sorting}
+        onSortingChange={setSorting}
       />
     </div>
   );

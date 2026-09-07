@@ -45,6 +45,18 @@ const mockTickets: TicketItem[] = [
   },
 ];
 
+const newestFirstTickets: TicketItem[] = [
+  mockTickets[2], // 103 (16:00)
+  mockTickets[1], // 102 (15:00)
+  mockTickets[0], // 101 (14:00)
+];
+
+const oldestFirstTickets: TicketItem[] = [
+  mockTickets[0], // 101 (14:00)
+  mockTickets[1], // 102 (15:00)
+  mockTickets[2], // 103 (16:00)
+];
+
 describe("TicketsPage Component", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -53,7 +65,7 @@ describe("TicketsPage Component", () => {
 
   it("renders tickets sorted newest first and displays metrics", async () => {
     vi.spyOn(api, "get").mockResolvedValueOnce({
-      data: { success: true, data: mockTickets },
+      data: { success: true, data: newestFirstTickets },
     });
 
     renderWithQuery(<TicketsPage />);
@@ -196,8 +208,16 @@ describe("TicketsPage Component", () => {
 
   it("toggles sort order between newest first and oldest first", async () => {
     const user = userEvent.setup();
-    vi.spyOn(api, "get").mockResolvedValueOnce({
-      data: { success: true, data: mockTickets },
+    const getSpy = vi.spyOn(api, "get").mockImplementation((_url, config) => {
+      const params = config?.params as Record<string, any> | undefined;
+      const isOldest =
+        params?.sortOrder === "asc" || params?.sort === "oldest";
+      return Promise.resolve({
+        data: {
+          success: true,
+          data: isOldest ? oldestFirstTickets : newestFirstTickets,
+        },
+      });
     });
 
     renderWithQuery(<TicketsPage />);
@@ -216,9 +236,70 @@ describe("TicketsPage Component", () => {
     await user.selectOptions(sortSelect, "oldest");
 
     // Oldest first: #101 (14:00) first, #103 (16:00) last
-    rows = screen.getAllByTestId(/^ticket-row-/);
-    expect(rows[0]).toHaveAttribute("data-testid", "ticket-row-101");
-    expect(rows[2]).toHaveAttribute("data-testid", "ticket-row-103");
+    await waitFor(() => {
+      rows = screen.getAllByTestId(/^ticket-row-/);
+      expect(rows[0]).toHaveAttribute("data-testid", "ticket-row-101");
+      expect(rows[2]).toHaveAttribute("data-testid", "ticket-row-103");
+    });
+
+    expect(getSpy).toHaveBeenCalledWith(
+      "/api/tickets",
+      expect.objectContaining({
+        params: expect.objectContaining({
+          sortBy: "createdAt",
+          sortOrder: "asc",
+        }),
+      })
+    );
+  });
+
+  it("sorts tickets on the server when clicking a TanStack Table column header", async () => {
+    const user = userEvent.setup();
+    const prioritySortedTickets = [
+      mockTickets[2], // LOW (#103)
+      mockTickets[1], // MEDIUM (#102)
+      mockTickets[0], // HIGH (#101)
+    ];
+
+    const getSpy = vi.spyOn(api, "get").mockImplementation((_url, config) => {
+      const params = config?.params as Record<string, any> | undefined;
+      if (params?.sortBy === "priority") {
+        return Promise.resolve({
+          data: { success: true, data: prioritySortedTickets },
+        });
+      }
+      return Promise.resolve({
+        data: { success: true, data: newestFirstTickets },
+      });
+    });
+
+    renderWithQuery(<TicketsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("React 19 Setup Issue")).toBeInTheDocument();
+    });
+
+    // Click Priority column header to trigger sorting
+    const priorityHeader = screen.getByTestId("sort-header-priority");
+    await user.click(priorityHeader);
+
+    await waitFor(() => {
+      expect(getSpy).toHaveBeenCalledWith(
+        "/api/tickets",
+        expect.objectContaining({
+          params: expect.objectContaining({
+            sortBy: "priority",
+            sortOrder: "asc",
+          }),
+        })
+      );
+    });
+
+    await waitFor(() => {
+      const rows = screen.getAllByTestId(/^ticket-row-/);
+      expect(rows[0]).toHaveAttribute("data-testid", "ticket-row-103");
+      expect(rows[2]).toHaveAttribute("data-testid", "ticket-row-101");
+    });
   });
 
   it("displays error alert when ticket query fails", async () => {

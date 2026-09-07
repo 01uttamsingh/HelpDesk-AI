@@ -51,11 +51,26 @@ export const ticketIdParamSchema = z.object({
 
 export type TicketIdParamInput = z.infer<typeof ticketIdParamSchema>;
 
+export const ticketSortFieldSchema = z.enum([
+  "createdAt",
+  "priority",
+  "status",
+  "category",
+  "subject",
+  "senderName",
+  "senderEmail",
+  "id",
+]);
+
+export const ticketSortOrderSchema = z.enum(["asc", "desc"]);
+
 export const ticketQuerySchema = z.object({
   status: z.nativeEnum(TicketStatus).optional(),
   category: ticketCategorySchema,
   search: z.string().optional(),
-  sort: z.enum(["newest", "oldest"]).default("newest").optional(),
+  sort: z.enum(["newest", "oldest"]).optional(),
+  sortBy: ticketSortFieldSchema.optional(),
+  sortOrder: ticketSortOrderSchema.optional(),
 });
 
 export type TicketQueryInput = z.infer<typeof ticketQuerySchema>;

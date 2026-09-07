@@ -638,6 +638,33 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 21: TanStack Table Integration with Server-Side Sorting & Realistic Ticket Seeding
+- **TanStack Table Integration (`client/src/features/tickets/components/TicketsTable.tsx`)**:
+  - Integrated `@tanstack/react-table` (v8.21.3) into `TicketsTable.tsx`.
+  - Configured with `manualSorting: true` and `enableSortingRemoval: false` so that table row ordering is driven strictly by the backend PostgreSQL database without client-side array re-sorting.
+  - Interactive column headers for `Ticket` (subject), `Customer` (senderName), `Category`, `Priority`, `Status`, and `Created` (createdAt).
+  - Directional sorting indicators: `ArrowUp` for ascending sort (`data-testid="sort-asc-{columnId}"`), `ArrowDown` for descending sort (`data-testid="sort-desc-{columnId}"`), and `ArrowUpDown` with subtle opacity for unsorted columns (`data-testid="sort-none-{columnId}"`).
+- **Server-Side Sorting Architecture (`server/src/features/tickets/`)**:
+  - `ticket.types.ts`: Added `TicketSortField` (`createdAt`, `priority`, `status`, `category`, `subject`, `senderName`, `senderEmail`, `id`) and `TicketSortOrder` (`asc`, `desc`). Updated `TicketFilterQuery` to include `sortBy` and `sortOrder`.
+  - `ticket.schema.ts`: Added `ticketSortFieldSchema` and `ticketSortOrderSchema`. Updated `ticketQuerySchema` with Zod validation for `sortBy` and `sortOrder`, while maintaining full backward compatibility with legacy `sort="newest"|"oldest"`.
+  - `ticket.service.ts`: Implemented dynamic `orderBy` query construction supporting any valid `TicketSortField` with secondary tie-breaking on `id: "desc"`.
+- **Client API & Query Orchestration (`client/src/features/tickets/`)**:
+  - `types/index.ts`: Updated `TicketFilters` with `sortBy?: TicketSortField` and `sortOrder?: TicketSortOrder`.
+  - `api/tickets.api.ts`: Forwarded `sortBy` and `sortOrder` as URL parameters to `GET /api/tickets`.
+  - `pages/TicketsPage.tsx`: Managed `sorting: SortingState` initialized to `[{ id: "createdAt", desc: true }]`, passed `{ sortBy, sortOrder }` to `useTickets` (TanStack Query), and synchronized with the filter sort dropdown. Removed client-side `.sort(...)` from `filteredTickets` useMemo.
+- **Root Development Script**:
+  - Added `"dev": "bun --filter \"*\" dev"` to root `package.json` to allow running both client and server concurrently with a single command.
+- **Realistic Data Seeding (`server/prisma/seed-tickets.ts`)**:
+  - Created dedicated seed script inserting 100 realistic, diverse tickets into PostgreSQL across all categories (25 Technical, 25 Refund, 25 General, 26 Uncategorized), priorities (24 High, 33 Medium, 44 Low), statuses (46 Open, 37 Resolved, 18 Closed), and staggered over 45 days.
+  - Added `"prisma:seed:tickets": "bun prisma/seed-tickets.ts"` to `server/package.json`.
+- **Verification**:
+  - Server Unit Tests (`bun test`): **59 / 59 passed** across 7 files, including new sorting tests in `ticket.schema.test.ts` and `ticket.service.test.ts`.
+  - Client Vitest Tests (`bun run test`): **77 / 77 passed** across 10 files, including TanStack Table header click and sort indicator tests.
+  - Playwright E2E Tests: Added column header sorting test in `e2e/tickets/ticket-list.spec.ts` (**3 / 3 passed**).
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -696,7 +723,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── prisma/
 │   │   ├── migrations/          # Applied database migrations (including soft delete)
 │   │   ├── schema.prisma        # Prisma schema (User with deletedAt)
-│   │   └── seed.ts              # Admin user seed script
+│   │   ├── seed.ts              # Admin user seed script
+│   │   └── seed-tickets.ts      # 100 realistic tickets seed script
 │   ├── src/
 │   │   ├── config/env.ts        # Environment validator
 │   │   ├── features/            # Feature-based domain modules

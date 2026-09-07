@@ -8,6 +8,7 @@
     "client"
   ],
   "scripts": {
+    "dev": "bun --filter \"*\" dev",
     "dev:server": "bun run --cwd server dev",
     "dev:client": "bun run --cwd client dev",
     "build:server": "bun run --cwd server build",
