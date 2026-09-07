@@ -347,6 +347,46 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 - **Verification**:
   - `bun run test:e2e` executed all **24 tests** (14 auth + 10 user list) with **100% pass rate** against `helpdesk_test`.
 
+### Milestone 13: User Creation via Modal Dialog (Full-Stack & E2E)
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma Client`)**:
+  - `server/src/services/user.service.ts`:
+    - Added `createUser({ name, email, password, role })` handling email normalization, conflict detection (duplicate email throws `UserServiceError` with 409), password hashing via `hashPassword` (`better-auth/crypto`), and atomic Prisma creation of `User` (defaulting to `Role.AGENT` and `emailVerified: false`) and linked credential `Account` record.
+    - Returns `SafeUser` omitting sensitive credentials.
+  - `server/src/controllers/user.controller.ts`:
+    - Added `createUser` controller validating request payload with Zod (`name`: min 3 chars, `email`: valid format, `password`: min 8 chars).
+    - Returns `400 Bad Request` on validation failure, `409 Conflict` on duplicate email, and `201 Created` with `{ success: true, data: user }`.
+  - `server/src/routes/user.routes.ts`:
+    - Registered `POST /api/users` guarded under `requireAdmin`.
+- **Frontend UI & Modal Component**:
+  - `client/src/components/ui/dialog.tsx`: Built accessible shadcn Dialog primitive based on `@base-ui/react/dialog` supporting Backdrop, Popup, Header, Title, Description, Footer, and Close.
+  - `client/src/components/CreateUserModal.tsx`:
+    - Dialog containing Name (min 3), Email (valid email), and Password (min 8) inputs.
+    - Password visibility toggle with Eye/EyeOff icons.
+    - React Hook Form + Zod client validation with inline `aria-invalid` error states.
+    - Destructive server error alert for 409 conflict and API error messages.
+    - TanStack Query mutation invalidating `queryKey: ["users"]` on success, automatically refreshing the user list and closing the modal.
+  - `client/src/pages/UsersPage.tsx`:
+    - Added "Create User" action button with `UserPlus` icon in header above the user list.
+    - Integrated `CreateUserModal` with controlled visibility state.
+- **Component & Unit Testing (React Testing Library + Vitest)**:
+  - Added 7 comprehensive test scenarios in `client/src/pages/UsersPage.test.tsx` (20/20 tests passing):
+    - Modal opening via "Create User" button.
+    - Validation for name (< 3 chars), email format, and password (< 8 chars).
+    - Successful submission with `POST /api/users`, query invalidation, and modal dismissal.
+    - Server error alert rendering on 409 duplicate email.
+    - Cancel button dismissal and form reset.
+- **E2E Testing (Playwright against `helpdesk_test`)**:
+  - Authored comprehensive 6-test suite in `e2e/users/create-user.spec.ts`:
+    - Modal opening and client-side validation triggers.
+    - Admin user creation flow, modal dismissal, and table row verification with Agent badge.
+    - Authentication verification: Newly created user logs in with their credentials and verifies non-admin access restrictions.
+    - Duplicate email conflict error handling.
+    - RBAC API protection: 401 Unauthorized for unauthenticated requests and 403 Forbidden for agent requests to `POST /api/users`.
+- **Verification**:
+  - `bun run test:e2e`: **30/30 tests passed** (14 auth + 10 user list + 6 create user) in 43.1s.
+  - `bun run test:component`: **20/20 tests passed** in Vitest.
+  - Full TypeScript build: `bun run build:server` and `bun run build:client` compile with zero errors.
+
 ---
 
 ## 7. Current Repository Layout
@@ -360,11 +400,13 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── badge.tsx    # Role & status badge component
 │   │   │   │   ├── button.tsx
 │   │   │   │   ├── card.tsx
+│   │   │   │   ├── dialog.tsx   # Accessible Dialog modal primitives (@base-ui/react)
 │   │   │   │   ├── input.tsx
 │   │   │   │   ├── label.tsx
 │   │   │   │   ├── separator.tsx
 │   │   │   │   └── skeleton.tsx # Skeleton loading placeholder component
 │   │   │   ├── AdminRoute.tsx   # Admin-only route guard
+│   │   │   ├── CreateUserModal.tsx # User creation modal dialog with Zod validation
 │   │   │   ├── Navbar.tsx       # Navigation bar with role-aware nav & sign out
 │   │   │   └── ProtectedRoute.tsx # Route protection with role checks & login redirect
 │   │   ├── context/
@@ -378,8 +420,8 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx     # Welcome dashboard & health status
 │   │   │   ├── LoginPage.tsx    # Sign-in form styled with shadcn components
-│   │   │   ├── UsersPage.tsx    # Admin user management dashboard
-│   │   │   └── UsersPage.test.tsx # React Testing Library component tests
+│   │   │   ├── UsersPage.tsx    # Admin user management dashboard with Create User
+│   │   │   └── UsersPage.test.tsx # React Testing Library component tests (20 tests)
 │   │   ├── test/
 │   │   │   ├── renderWithQuery.tsx # Custom render wrapper providing QueryClientProvider
 │   │   │   ├── setup.ts         # Vitest DOM setup & cleanup
@@ -403,15 +445,15 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── auth.ts              # Better Auth server configuration
 │   │   ├── config/env.ts        # Environment validator (supports test env)
 │   │   ├── controllers/
-│   │   │   └── user.controller.ts # User management handlers
+│   │   │   └── user.controller.ts # User management handlers (listUsers, createUser)
 │   │   ├── middleware/
 │   │   │   └── auth.middleware.ts # requireAuth & requireAdmin RBAC
 │   │   ├── prisma.ts            # Prisma client instance (supports test db)
 │   │   ├── routes/
 │   │   │   ├── admin.routes.ts  # Legacy admin routes (/api/admin)
-│   │   │   └── user.routes.ts   # User management routes (/api/users)
+│   │   │   └── user.routes.ts   # User management routes (/api/users GET & POST)
 │   │   ├── services/
-│   │   │   └── user.service.ts  # User queries & safe data projections
+│   │   │   └── user.service.ts  # User queries, creation & safe data projections
 │   │   └── index.ts             # Express server connected to PostgreSQL
 │   ├── .env                     # Local Postgres on port 5433 (helpdesk)
 │   ├── .env.test                # Local Postgres on port 5433 (helpdesk_test)
@@ -439,6 +481,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   ├── scripts/
 │   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
 │   ├── users/
+│   │   ├── create-user.spec.ts  # User creation, modal validation, persistence & login tests
 │   │   └── users-list.spec.ts   # Admin user list, search, filters & RBAC protection tests
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)
@@ -453,6 +496,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ├── implementation-plan.md
 └── agy-memory.md                # This project memory file
 ```
+
 
 ---
 

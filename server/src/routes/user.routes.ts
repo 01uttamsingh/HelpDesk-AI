@@ -14,4 +14,12 @@ router.use(requireAdmin);
  */
 router.get("/", userController.listUsers);
 
+/**
+ * POST /api/users
+ * Creates a new platform user with name, email, and password.
+ * Restricted to ADMIN role.
+ */
+router.post("/", userController.createUser);
+
 export default router;
+

@@ -11,6 +11,7 @@ import {
   Clock,
   Mail,
   Calendar,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreateUserModal } from "@/components/CreateUserModal";
 import axios from "axios";
 import { api } from "@/lib/api";
 
@@ -35,6 +37,8 @@ export interface UserItem {
 export function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | "ADMIN" | "AGENT">("ALL");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
 
   const {
     data: users = [],
@@ -116,19 +120,32 @@ export function UsersPage() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-2 self-start sm:self-auto"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${isFetching ? "animate-spin text-muted-foreground" : ""}`}
-          />
-          <span>Refresh</span>
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin text-muted-foreground" : ""}`}
+            />
+            <span>Refresh</span>
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="gap-2"
+            data-testid="create-user-button"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Create User</span>
+          </Button>
+        </div>
       </div>
+
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -405,8 +422,14 @@ export function UsersPage() {
           </table>
         </div>
       </div>
+
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
+
 
 export default UsersPage;

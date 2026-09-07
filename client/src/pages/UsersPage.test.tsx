@@ -351,4 +351,212 @@ describe("UsersPage Component", () => {
       expect(getSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe("8. Create User Modal & User Creation", () => {
+    it("renders 'Create User' button above user list and opens modal on click", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Admin Alice")).toBeInTheDocument();
+      });
+
+      const createButton = screen.getByRole("button", { name: /create user/i });
+      expect(createButton).toBeInTheDocument();
+
+      await user.click(createButton);
+
+      expect(screen.getByRole("heading", { name: "Create New User" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+      expect(screen.getByLabelText("Email")).toBeInTheDocument();
+      expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    });
+
+    it("validates that name must be at least 3 characters", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      const nameInput = screen.getByLabelText("Name");
+      const emailInput = screen.getByLabelText("Email");
+      const passwordInput = screen.getByLabelText("Password");
+
+      await user.type(nameInput, "Ab"); // less than 3 chars
+      await user.type(emailInput, "valid@example.com");
+      await user.type(passwordInput, "password123");
+
+      const submitBtn = screen.getByRole("button", { name: /^Create User$/i });
+      await user.click(submitBtn);
+
+      expect(
+        await screen.findByText("Name must be at least 3 characters")
+      ).toBeInTheDocument();
+    });
+
+    it("validates that email must be a valid email format", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      const nameInput = screen.getByLabelText("Name");
+      const emailInput = screen.getByLabelText("Email");
+      const passwordInput = screen.getByLabelText("Password");
+
+      await user.type(nameInput, "Jane Doe");
+      await user.type(emailInput, "not-an-email");
+      await user.type(passwordInput, "password123");
+
+      const submitBtn = screen.getByRole("button", { name: /^Create User$/i });
+      await user.click(submitBtn);
+
+      expect(
+        await screen.findByText("Please enter a valid email address")
+      ).toBeInTheDocument();
+    });
+
+    it("validates that password must be at least 8 characters", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      const nameInput = screen.getByLabelText("Name");
+      const emailInput = screen.getByLabelText("Email");
+      const passwordInput = screen.getByLabelText("Password");
+
+      await user.type(nameInput, "Jane Doe");
+      await user.type(emailInput, "jane@example.com");
+      await user.type(passwordInput, "1234567"); // 7 chars
+
+      const submitBtn = screen.getByRole("button", { name: /^Create User$/i });
+      await user.click(submitBtn);
+
+      expect(
+        await screen.findByText("Password must be at least 8 characters")
+      ).toBeInTheDocument();
+    });
+
+    it("submits valid form, issues POST /api/users, and closes modal", async () => {
+      const user = userEvent.setup();
+      const getSpy = vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+      const postSpy = vi.spyOn(api, "post").mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            id: "user-3",
+            name: "Jane Agent",
+            email: "jane.agent@example.com",
+            role: "AGENT",
+            emailVerified: false,
+            image: null,
+            createdAt: "2026-03-01T10:00:00.000Z",
+            updatedAt: "2026-03-01T10:00:00.000Z",
+          },
+        },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Admin Alice")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      const nameInput = screen.getByLabelText("Name");
+      const emailInput = screen.getByLabelText("Email");
+      const passwordInput = screen.getByLabelText("Password");
+
+      await user.type(nameInput, "Jane Agent");
+      await user.type(emailInput, "jane.agent@example.com");
+      await user.type(passwordInput, "password123");
+
+      const submitBtn = screen.getByRole("button", { name: /^Create User$/i });
+      await user.click(submitBtn);
+
+      await waitFor(() => {
+        expect(postSpy).toHaveBeenCalledWith("/api/users", {
+          name: "Jane Agent",
+          email: "jane.agent@example.com",
+          password: "password123",
+        });
+      });
+
+      // Modal should be closed
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Create New User" })).not.toBeInTheDocument();
+      });
+
+      // TanStack Query invalidation triggers get refetch
+      expect(getSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("displays server error message in modal when user creation fails", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+      vi.spyOn(api, "post").mockRejectedValue(
+        createAxiosError(409, "Conflict", "A user with this email already exists")
+      );
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      await user.type(screen.getByLabelText("Name"), "Admin Alice");
+      await user.type(screen.getByLabelText("Email"), "admin@example.com");
+      await user.type(screen.getByLabelText("Password"), "password123");
+
+      await user.click(screen.getByRole("button", { name: /^Create User$/i }));
+
+      expect(
+        await screen.findByText("A user with this email already exists")
+      ).toBeInTheDocument();
+
+      // Modal remains open on error
+      expect(screen.getByRole("heading", { name: "Create New User" })).toBeInTheDocument();
+    });
+
+    it("closes modal and resets form when clicking Cancel button", async () => {
+      const user = userEvent.setup();
+      vi.spyOn(api, "get").mockResolvedValue({
+        data: { success: true, data: mockUsers },
+      });
+
+      renderWithQuery(<UsersPage />);
+
+      await user.click(screen.getByRole("button", { name: /create user/i }));
+
+      expect(screen.getByRole("heading", { name: "Create New User" })).toBeInTheDocument();
+
+      const cancelButton = screen.getByRole("button", { name: /Cancel/i });
+      await user.click(cancelButton);
+
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: "Create New User" })).not.toBeInTheDocument();
+      });
+    });
+  });
 });
+
