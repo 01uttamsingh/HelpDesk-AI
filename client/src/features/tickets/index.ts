@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./api/tickets.api";
 export * from "./hooks/useTickets";
 export * from "./hooks/useTicket";
+export * from "./hooks/useAssignTicket";
 export * from "./components/TicketStatusBadge";
 export * from "./components/TicketPriorityBadge";
 export * from "./components/TicketCategoryBadge";

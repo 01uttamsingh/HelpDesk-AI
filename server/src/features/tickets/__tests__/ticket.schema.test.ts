@@ -1,5 +1,10 @@
 import { describe, it, expect } from "bun:test";
-import { inboundEmailSchema, normalizeCategory, ticketQuerySchema } from "../ticket.schema";
+import {
+  inboundEmailSchema,
+  normalizeCategory,
+  ticketQuerySchema,
+  assignTicketSchema,
+} from "../ticket.schema";
 import { TicketCategory } from "@prisma/client";
 
 describe("ticket.schema", () => {
@@ -155,6 +160,28 @@ describe("ticket.schema", () => {
       expect(() => ticketQuerySchema.parse({ page: 0 })).toThrow();
       expect(() => ticketQuerySchema.parse({ page: -1 })).toThrow();
       expect(() => ticketQuerySchema.parse({ pageSize: 150 })).toThrow();
+    });
+  });
+
+  describe("assignTicketSchema", () => {
+    it("parses valid user id string", () => {
+      const parsed = assignTicketSchema.parse({ assignedToId: "user-uuid-123" });
+      expect(parsed.assignedToId).toBe("user-uuid-123");
+    });
+
+    it("parses null as null (unassign)", () => {
+      const parsed = assignTicketSchema.parse({ assignedToId: null });
+      expect(parsed.assignedToId).toBeNull();
+    });
+
+    it("normalizes empty string and whitespace to null", () => {
+      expect(assignTicketSchema.parse({ assignedToId: "" }).assignedToId).toBeNull();
+      expect(assignTicketSchema.parse({ assignedToId: "   " }).assignedToId).toBeNull();
+    });
+
+    it("defaults omitted assignedToId to null", () => {
+      const parsed = assignTicketSchema.parse({});
+      expect(parsed.assignedToId).toBeNull();
     });
   });
 });

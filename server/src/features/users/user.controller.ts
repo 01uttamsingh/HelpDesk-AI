@@ -43,6 +43,26 @@ export async function listUsers(
 }
 
 /**
+ * Controller to list active users who can be assigned to tickets.
+ * Accessible to any authenticated user (Admins and Agents).
+ */
+export async function listAssignees(
+  _req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const users = await userService.getAssignableUsers();
+    return res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    handleControllerError(error, res, next, "listAssignees controller");
+  }
+}
+
+/**
  * Controller to create a new user.
  * Validates input: name >= 3 chars, valid email, password >= 8 chars.
  * Accessible only to authenticated users with ADMIN role.

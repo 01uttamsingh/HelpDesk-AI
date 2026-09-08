@@ -217,6 +217,147 @@ describe("TicketDetailPage", () => {
     const refreshBtn = screen.getByTestId("refresh-ticket-button");
     await user.click(refreshBtn);
 
-    expect(getSpy).toHaveBeenCalledTimes(2);
+    const ticketCalls = getSpy.mock.calls.filter(([url]) => url === "/api/tickets/101");
+    expect(ticketCalls).toHaveLength(2);
+  });
+
+  it("renders assignee select dropdown populated with assignable agents", async () => {
+    const mockAssignees = [
+      { id: "agent-1", name: "Agent Alex", email: "alex@example.com", role: "AGENT" },
+      { id: "admin-1", name: "Admin Sam", email: "sam@example.com", role: "ADMIN" },
+    ];
+
+    vi.spyOn(api, "get").mockImplementation(async (url: string) => {
+      if (url.includes("/assignees")) {
+        return { data: { success: true, data: mockAssignees } } as any;
+      }
+      return { data: { success: true, data: mockTicket } } as any;
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assignee-select")).toBeInTheDocument();
+    });
+
+    const select = screen.getByTestId("assignee-select");
+    expect(select).toHaveValue("");
+    expect(screen.getByTestId("assignee-option-agent-1")).toHaveTextContent("Agent Alex (Agent)");
+    expect(screen.getByTestId("assignee-option-admin-1")).toHaveTextContent("Admin Sam (Admin)");
+  });
+
+  it("calls assign API and updates assignment when an agent is selected", async () => {
+    const user = userEvent.setup();
+    const mockAssignees = [
+      { id: "agent-1", name: "Agent Alex", email: "alex@example.com", role: "AGENT" },
+    ];
+
+    vi.spyOn(api, "get").mockImplementation(async (url: string) => {
+      if (url.includes("/assignees")) {
+        return { data: { success: true, data: mockAssignees } } as any;
+      }
+      return { data: { success: true, data: mockTicket } } as any;
+    });
+
+    const patchSpy = vi.spyOn(api, "patch").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          ...mockTicket,
+          assignedToId: "agent-1",
+          assignedTo: mockAssignees[0],
+        },
+      },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assignee-select")).toBeInTheDocument();
+    });
+
+    const select = screen.getByTestId("assignee-select");
+    await user.selectOptions(select, "agent-1");
+
+    expect(patchSpy).toHaveBeenCalledWith("/api/tickets/101/assign", {
+      assignedToId: "agent-1",
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assigned-agent-name")).toHaveTextContent("Agent Alex");
+    });
+  });
+
+  it("calls assign API with null when Unassigned is selected", async () => {
+    const user = userEvent.setup();
+    const mockAssignees = [
+      { id: "user-agent-1", name: "Support Agent Sarah", email: "sarah@example.com", role: "AGENT" },
+    ];
+
+    vi.spyOn(api, "get").mockImplementation(async (url: string) => {
+      if (url.includes("/assignees")) {
+        return { data: { success: true, data: mockAssignees } } as any;
+      }
+      return { data: { success: true, data: mockTicketWithAssignee } } as any;
+    });
+
+    const patchSpy = vi.spyOn(api, "patch").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          ...mockTicketWithAssignee,
+          assignedToId: null,
+          assignedTo: null,
+        },
+      },
+    });
+
+    renderTicketDetail("/tickets/102");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assigned-agent-name")).toHaveTextContent("Support Agent Sarah");
+    });
+
+    const select = screen.getByTestId("assignee-select");
+    expect(select).toHaveValue("user-agent-1");
+
+    await user.selectOptions(select, "");
+
+    expect(patchSpy).toHaveBeenCalledWith("/api/tickets/102/assign", {
+      assignedToId: null,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assigned-agent-unassigned")).toHaveTextContent("Unassigned");
+    });
+  });
+
+  it("displays error message if assigning ticket fails", async () => {
+    const user = userEvent.setup();
+    const mockAssignees = [
+      { id: "agent-1", name: "Agent Alex", email: "alex@example.com", role: "AGENT" },
+    ];
+
+    vi.spyOn(api, "get").mockImplementation(async (url: string) => {
+      if (url.includes("/assignees")) {
+        return { data: { success: true, data: mockAssignees } } as any;
+      }
+      return { data: { success: true, data: mockTicket } } as any;
+    });
+
+    vi.spyOn(api, "patch").mockRejectedValueOnce(new Error("Network Error"));
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assignee-select")).toBeInTheDocument();
+    });
+
+    const select = screen.getByTestId("assignee-select");
+    await user.selectOptions(select, "agent-1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("assign-error-message")).toBeInTheDocument();
+    });
   });
 });

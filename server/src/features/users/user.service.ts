@@ -53,6 +53,27 @@ export async function getAllUsers(): Promise<SafeUser[]> {
 }
 
 /**
+ * Retrieves all registered active users who can be assigned to tickets.
+ * Filters out soft-deleted users (where deletedAt is null).
+ */
+export async function getAssignableUsers(): Promise<
+  Array<{ id: string; name: string; email: string; role: string }>
+> {
+  return prisma.user.findMany({
+    where: {
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+    },
+    orderBy: [{ name: "asc" }],
+  });
+}
+
+/**
  * Creates a new user and corresponding credential account in the database.
  * Hashes password using Better Auth crypto utility.
  * Defaults role to AGENT and emailVerified to false.

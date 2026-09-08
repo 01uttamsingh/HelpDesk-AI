@@ -767,6 +767,38 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 25: Ticket Assignment to Agents (Full-Stack Mutation & UI)
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma`)**:
+  - `ticket.schema.ts`: Added `assignTicketSchema` and `AssignTicketInput` (normalizes `assignedToId: string | null`, coercing empty strings/whitespace to `null`).
+  - `ticket.service.ts`:
+    - Added `TicketServiceError` with HTTP status code support.
+    - Added `assignTicket(ticketId: number, assignedToId: string | null)`: verifies ticket exists (throws 404), verifies assigned user exists and is not soft-deleted (`deletedAt === null`, throws 400), updates `assignedToId` atomically, and returns updated ticket including `assignedTo: { id, name, email, role }`.
+    - Added `getAssignableUsers()`: returns active platform users (`where: { deletedAt: null }`) with safe projection `{ id, name, email, role }` sorted by name.
+  - `ticket.controller.ts`: Added `assignTicket` and `getAssignees` controller handlers with validation and error formatting.
+  - `ticket.routes.ts`: Mounted `GET /api/tickets/assignees` and `PATCH /api/tickets/:id/assign` under `requireAuth` (ensuring `/assignees` is registered before `/:id` to avoid route param collisions).
+  - `user.routes.ts`, `user.controller.ts`, `user.service.ts`: Added `GET /api/users/assignees` under `requireAuth` before `requireAdmin` for platform-wide API consistency.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - `api/tickets.api.ts`: Added `assignTicket(id, assignedToId)` and `getAssignableUsers()` with type safety and safe array fallback.
+  - `hooks/useAssignTicket.ts`:
+    - `useAssignableUsers()`: Query hook caching assignees under `["users", "assignees"]` with 5-minute stale time.
+    - `useAssignTicket(ticketId: number)`: Mutation hook executing `assignTicket` that immediately updates query cache `["tickets", ticketId]` and invalidates list/counts queries while preserving the current ticket detail state without duplicate network calls.
+  - `pages/TicketDetailPage.tsx`:
+    - Replaced static assignee text with an interactive `<select>` dropdown (`data-testid="assignee-select"`).
+    - Populated with all active assignable agents with role tags (`(Admin)` / `(Agent)`).
+    - Displays active saving indicator (`data-testid="assigning-spinner"`) during pending mutations.
+    - Displays inline error message (`data-testid="assign-error-message"`) if assignment fails.
+    - Maintains `data-testid="assigned-agent-name"` and `data-testid="assigned-agent-unassigned"` for seamless backward compatibility.
+  - `index.ts`: Re-exported `useAssignTicket` and `useAssignableUsers`.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test server/src`): **57 / 57 passed** across 4 test files. Covered `assignTicket` assigning, reassigning, unassigning, 404 on missing ticket, 400 on non-existent or soft-deleted user, and `getAssignableUsers` filtering.
+  - Client Vitest Tests (`bun run test:component`): **93 / 93 passed** across 11 test files. Added 4 comprehensive tests in `TicketDetailPage.test.tsx` verifying dropdown rendering, agent assignment mutation, unassignment, and error alert.
+  - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **7 / 7 passed** against `helpdesk_test`. Added E2E test covering agent login, ticket navigation, dropdown agent selection, immediate DOM update, and unassignment back to "Unassigned".
+  - Production Builds:
+    - Server: `tsc` type-check completed with 0 errors.
+    - Client: `tsc -b && vite build` built with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -808,7 +840,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   └── tickets/         # Tickets feature module
 │   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById)
 │   │   │       ├── components/  # TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
-│   │   │       ├── hooks/       # useTickets, useTicket
+│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket
 │   │   │       ├── pages/       # TicketsPage.tsx, TicketDetailPage.tsx
 │   │   │       ├── types/       # TicketItem, TicketFilters, PaginationMeta, etc.
 │   │   │       ├── utils/       # date.ts (formatDate helper)

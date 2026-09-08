@@ -1,5 +1,11 @@
 import { api } from "@/lib/api";
-import type { TicketItem, TicketFilters, TicketCounts, PaginationMeta } from "../types";
+import type {
+  TicketItem,
+  TicketFilters,
+  TicketCounts,
+  PaginationMeta,
+  TicketAssignedUser,
+} from "../types";
 
 export interface GetTicketsResponse {
   success: boolean;
@@ -68,3 +74,33 @@ export async function getTicketById(id: number): Promise<TicketItem> {
   const res = await api.get<GetTicketResponse>(`/api/tickets/${id}`);
   return res.data.data;
 }
+
+export interface AssignTicketResponse {
+  success: boolean;
+  data: TicketItem;
+}
+
+export interface GetAssigneesResponse {
+  success: boolean;
+  data: TicketAssignedUser[];
+}
+
+export async function assignTicket(
+  id: number,
+  assignedToId: string | null
+): Promise<TicketItem> {
+  const res = await api.patch<AssignTicketResponse>(`/api/tickets/${id}/assign`, {
+    assignedToId,
+  });
+  return res.data.data;
+}
+
+export async function getAssignableUsers(): Promise<TicketAssignedUser[]> {
+  try {
+    const res = await api.get<GetAssigneesResponse>("/api/tickets/assignees");
+    return Array.isArray(res?.data?.data) ? res.data.data : [];
+  } catch {
+    return [];
+  }
+}
+

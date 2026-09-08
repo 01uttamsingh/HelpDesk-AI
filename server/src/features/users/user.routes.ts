@@ -1,8 +1,15 @@
 import { Router } from "express";
-import { requireAdmin } from "../auth/auth.middleware";
+import { requireAdmin, requireAuth } from "../auth/auth.middleware";
 import * as userController from "./user.controller";
 
 const router = Router();
+
+/**
+ * GET /api/users/assignees
+ * Returns list of all active assignable users (Admins & Agents).
+ * Accessible to any authenticated user (Agent or Admin).
+ */
+router.get("/assignees", requireAuth, userController.listAssignees);
 
 // Enforce admin authentication across all user management routes
 router.use(requireAdmin);

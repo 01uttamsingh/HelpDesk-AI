@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { ticketService } from "../ticket.service";
+import { ticketService, TicketServiceError } from "../ticket.service";
 import { ticketIngestService } from "../ticket-ingest.service";
 import { TicketCategory, TicketStatus, TicketPriority } from "@prisma/client";
 import prisma from "../../../prisma";
@@ -286,4 +286,175 @@ describe("ticketService.getTicketById", () => {
     expect(ticket).toBeNull();
   });
 });
+
+describe("ticketService.assignTicket", () => {
+  it("assigns a ticket to an active agent and returns updated ticket with assignedTo relation", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Agent Test ${timestamp}`,
+        email: `agent.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Assign Test ${timestamp}`,
+      text: "Assign me please",
+    });
+
+    const updated = await ticketService.assignTicket(ticket.id, agent.id);
+    expect(updated.assignedToId).toBe(agent.id);
+    expect((updated as any).assignedTo?.name).toBe(agent.name);
+    expect((updated as any).assignedTo?.email).toBe(agent.email);
+  });
+
+  it("reassigns a ticket to a different agent", async () => {
+    const timestamp = Date.now();
+    const agent1 = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Agent One ${timestamp}`,
+        email: `agent1.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const agent2 = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Agent Two ${timestamp}`,
+        email: `agent2.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Reassign Test ${timestamp}`,
+      text: "Reassign me please",
+    });
+
+    await ticketService.assignTicket(ticket.id, agent1.id);
+    const reassigned = await ticketService.assignTicket(ticket.id, agent2.id);
+
+    expect(reassigned.assignedToId).toBe(agent2.id);
+    expect((reassigned as any).assignedTo?.name).toBe(agent2.name);
+  });
+
+  it("unassigns a ticket when null is passed as assignedToId", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Agent Unassign ${timestamp}`,
+        email: `unassign.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Unassign Ticket ${timestamp}`,
+      text: "Unassign testing",
+    });
+
+    await ticketService.assignTicket(ticket.id, agent.id);
+    const unassigned = await ticketService.assignTicket(ticket.id, null);
+
+    expect(unassigned.assignedToId).toBeNull();
+    expect((unassigned as any).assignedTo).toBeNull();
+  });
+
+  it("throws 404 TicketServiceError when ticket ID does not exist", async () => {
+    expect(ticketService.assignTicket(999999999, null)).rejects.toThrow(TicketServiceError);
+    try {
+      await ticketService.assignTicket(999999999, null);
+    } catch (err: any) {
+      expect(err.statusCode).toBe(404);
+      expect(err.message).toBe("Ticket not found");
+    }
+  });
+
+  it("throws 400 TicketServiceError when assigned user ID does not exist", async () => {
+    const timestamp = Date.now();
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Invalid User Test ${timestamp}`,
+      text: "Invalid user",
+    });
+
+    try {
+      await ticketService.assignTicket(ticket.id, "non-existent-user-id");
+      expect(true).toBe(false); // should not reach
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toContain("not found");
+    }
+  });
+
+  it("throws 400 TicketServiceError when assigned user is soft-deleted", async () => {
+    const timestamp = Date.now();
+    const deletedUser = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Deleted User ${timestamp}`,
+        email: `deleted.${timestamp}@example.com`,
+        role: "AGENT",
+        deletedAt: new Date(),
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Deleted User Ticket ${timestamp}`,
+      text: "Testing soft delete assignment",
+    });
+
+    try {
+      await ticketService.assignTicket(ticket.id, deletedUser.id);
+      expect(true).toBe(false); // should not reach
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toContain("deactivated");
+    }
+  });
+});
+
+describe("ticketService.getAssignableUsers", () => {
+  it("returns active users and excludes soft-deleted users", async () => {
+    const timestamp = Date.now();
+    const activeAgent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Active Agent ${timestamp}`,
+        email: `active.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const softDeletedAgent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Deleted Agent ${timestamp}`,
+        email: `deletedagent.${timestamp}@example.com`,
+        role: "AGENT",
+        deletedAt: new Date(),
+      },
+    });
+
+    const assignees = await ticketService.getAssignableUsers();
+    const foundActive = assignees.find((u) => u.id === activeAgent.id);
+    const foundDeleted = assignees.find((u) => u.id === softDeletedAgent.id);
+
+    expect(foundActive).toBeDefined();
+    expect(foundActive?.name).toBe(activeAgent.name);
+    expect(foundDeleted).toBeUndefined();
+  });
+});
+
 

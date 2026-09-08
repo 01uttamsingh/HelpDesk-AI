@@ -6,6 +6,15 @@ import type {
   PaginatedTicketsResult,
 } from "./ticket.types";
 
+export class TicketServiceError extends Error {
+  statusCode: number;
+  constructor(message: string, statusCode: number = 400) {
+    super(message);
+    this.name = "TicketServiceError";
+    this.statusCode = statusCode;
+  }
+}
+
 export class TicketService {
   /**
    * Fetch a single ticket by its auto-increment integer ID.
@@ -120,6 +129,67 @@ export class TicketService {
     ]);
 
     return { total, open, resolved, closed };
+  }
+
+  /**
+   * Assign or reassign a ticket to a user, or unassign if assignedToId is null.
+   * Validates that the ticket exists, and if assignedToId is provided, validates that the user exists and is not soft-deleted.
+   */
+  async assignTicket(ticketId: number, assignedToId: string | null): Promise<Ticket> {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new TicketServiceError("Ticket not found", 404);
+    }
+
+    if (assignedToId !== null) {
+      const user = await prisma.user.findUnique({
+        where: { id: assignedToId },
+        select: { id: true, deletedAt: true, role: true },
+      });
+
+      if (!user || user.deletedAt) {
+        throw new TicketServiceError("Assigned user not found or deactivated", 400);
+      }
+    }
+
+    return prisma.ticket.update({
+      where: { id: ticketId },
+      data: { assignedToId },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Retrieve all active users who can be assigned to tickets (Admins & Agents).
+   * Filters out soft-deleted users (deletedAt: null).
+   */
+  async getAssignableUsers(): Promise<
+    Array<{ id: string; name: string; email: string; role: string }>
+  > {
+    return prisma.user.findMany({
+      where: {
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: [{ name: "asc" }],
+    });
   }
 }
 

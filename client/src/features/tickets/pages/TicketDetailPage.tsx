@@ -17,12 +17,21 @@ import { TicketStatusBadge } from "../components/TicketStatusBadge";
 import { TicketPriorityBadge } from "../components/TicketPriorityBadge";
 import { TicketCategoryBadge } from "../components/TicketCategoryBadge";
 import { useTicket } from "../hooks/useTicket";
+import { useAssignTicket, useAssignableUsers } from "../hooks/useAssignTicket";
 import { formatDate } from "../utils/date";
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const numericId = typeof id === "string" ? parseInt(id, 10) : undefined;
   const { ticket, isLoading, isFetching, errorMessage, isNotFound, isValidId, refetch } =
-    useTicket(id);
+    useTicket(numericId);
+  const { data: assignees = [], isLoading: isLoadingAssignees } = useAssignableUsers();
+  const {
+    mutate: assignTicketMutation,
+    isPending: isAssigning,
+    error: assignError,
+  } = useAssignTicket(numericId ?? 0);
+  const safeAssignees = Array.isArray(assignees) ? assignees : [];
 
   // Loading skeleton state
   if (isLoading) {
@@ -266,18 +275,71 @@ export function TicketDetailPage() {
                 <TicketCategoryBadge category={ticket.category} />
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-border/60">
-                <span className="text-muted-foreground">Assigned To</span>
-                {ticket.assignedTo ? (
-                  <div className="flex items-center gap-1.5 text-foreground font-medium" data-testid="assigned-agent-name">
-                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{ticket.assignedTo.name}</span>
+              <div className="pt-2 border-t border-border/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Assigned To</span>
+                  {ticket.assignedTo ? (
+                    <div
+                      className="flex items-center gap-1.5 text-foreground font-medium"
+                      data-testid="assigned-agent-name"
+                    >
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{ticket.assignedTo.name}</span>
+                    </div>
+                  ) : (
+                    <span
+                      className="text-muted-foreground italic"
+                      data-testid="assigned-agent-unassigned"
+                    >
+                      Unassigned
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor="ticket-assignee-select" className="sr-only">
+                    Assign Agent
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      id="ticket-assignee-select"
+                      aria-label="Assign ticket to an agent"
+                      value={ticket.assignedToId || ""}
+                      onChange={(e) => {
+                        const nextId = e.target.value;
+                        assignTicketMutation(nextId === "" ? null : nextId);
+                      }}
+                      disabled={isAssigning || isLoadingAssignees}
+                      className="w-full h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      data-testid="assignee-select"
+                    >
+                      <option value="">Unassigned</option>
+                      {safeAssignees.map((agent) => (
+                        <option
+                          key={agent.id}
+                          value={agent.id}
+                          data-testid={`assignee-option-${agent.id}`}
+                        >
+                          {agent.name} {agent.role === "ADMIN" ? "(Admin)" : "(Agent)"}
+                        </option>
+                      ))}
+                    </select>
+                    {isAssigning && (
+                      <RefreshCw
+                        className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0"
+                        data-testid="assigning-spinner"
+                      />
+                    )}
                   </div>
-                ) : (
-                  <span className="text-muted-foreground italic" data-testid="assigned-agent-unassigned">
-                    Unassigned
-                  </span>
-                )}
+                  {assignError && (
+                    <p
+                      className="text-[11px] text-destructive font-medium"
+                      data-testid="assign-error-message"
+                    >
+                      Failed to update assignment.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-border/60">

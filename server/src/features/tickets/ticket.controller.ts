@@ -1,8 +1,13 @@
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
-import { inboundEmailSchema, ticketIdParamSchema, ticketQuerySchema } from "./ticket.schema";
+import {
+  inboundEmailSchema,
+  ticketIdParamSchema,
+  ticketQuerySchema,
+  assignTicketSchema,
+} from "./ticket.schema";
 import { ticketIngestService } from "./ticket-ingest.service";
-import { ticketService } from "./ticket.service";
+import { ticketService, TicketServiceError } from "./ticket.service";
 
 export class TicketController {
   /**
@@ -110,6 +115,80 @@ export class TicketController {
       res.status(500).json({
         success: false,
         error: "Failed to retrieve tickets",
+      });
+    }
+  }
+
+  /**
+   * PATCH /api/tickets/:id/assign
+   * Assign or unassign a ticket to an agent.
+   */
+  async assignTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const parsedBody = assignTicketSchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid assign payload",
+          details: parsedBody.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      const updatedTicket = await ticketService.assignTicket(
+        parsedParams.data.id,
+        parsedBody.data.assignedToId ?? null
+      );
+
+      res.status(200).json({
+        success: true,
+        data: updatedTicket,
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to assign ticket:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to assign ticket",
+      });
+    }
+  }
+
+  /**
+   * GET /api/tickets/assignees
+   * Retrieve list of active users that can be assigned tickets.
+   */
+  async getAssignees(_req: Request, res: Response): Promise<void> {
+    try {
+      const assignees = await ticketService.getAssignableUsers();
+      res.status(200).json({
+        success: true,
+        data: assignees,
+      });
+    } catch (error) {
+      console.error("Failed to retrieve assignees:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to retrieve assignable users",
       });
     }
   }

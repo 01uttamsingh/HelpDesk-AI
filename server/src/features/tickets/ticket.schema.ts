@@ -80,3 +80,13 @@ export const ticketQuerySchema = z.object({
 });
 
 export type TicketQueryInput = z.infer<typeof ticketQuerySchema>;
+
+export const assignTicketSchema = z.object({
+  assignedToId: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => (!val || val.trim() === "" ? null : val.trim())),
+});
+
+export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
+

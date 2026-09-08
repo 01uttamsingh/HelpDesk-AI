@@ -326,6 +326,55 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await signOutViaUI(page);
   });
 
+  test("allows agent to assign ticket to an agent and unassign on ticket details page", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+    const subject = `Assign Ticket E2E [${timestamp}]`;
+
+    // 1. Create a ticket via inbound webhook
+    const res = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Student Assign <student.${timestamp}@example.com>`,
+        subject,
+        text: "Need this assigned to an agent.",
+        category: "General Question",
+      },
+    });
+    expect(res.status()).toBe(201);
+    const { data: ticket } = await res.json();
+
+    // 2. Login as agent and navigate to ticket details
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto(`/tickets/${ticket.id}`);
+
+    // Wait for ticket to load
+    await expect(page.getByTestId("ticket-detail-subject")).toHaveText(subject);
+
+    // Verify initial unassigned state
+    await expect(page.getByTestId("assigned-agent-unassigned")).toHaveText("Unassigned");
+
+    // 3. Select agent from assignee dropdown
+    const select = page.getByTestId("assignee-select");
+    await expect(select).toBeVisible();
+
+    // Select first agent in options (index 1)
+    await select.selectOption({ index: 1 });
+
+    // Verify assigned agent name updates in UI
+    await expect(page.getByTestId("assigned-agent-name")).toBeVisible();
+
+    // 4. Select Unassigned again
+    await select.selectOption({ value: "" });
+
+    // Verify unassigned state returns
+    await expect(page.getByTestId("assigned-agent-unassigned")).toHaveText("Unassigned");
+
+    await signOutViaUI(page);
+  });
+
   test("redirects unauthenticated visitor from /tickets to /login", async ({
     page,
   }) => {
