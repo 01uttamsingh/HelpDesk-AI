@@ -58,6 +58,13 @@ test.describe("Authentication - Session, Sign Out & Route Guards", () => {
       await expect(page.getByText(/sign in to helpdesk/i)).toBeVisible();
       await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
     });
+
+    test("redirects unauthenticated visitor from /tickets to /login", async ({ page }) => {
+      await page.goto("/tickets");
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.getByText(/sign in to helpdesk/i)).toBeVisible();
+      await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
+    });
   });
 
   test.describe("8. Already-Authenticated Redirect", () => {

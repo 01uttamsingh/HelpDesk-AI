@@ -80,13 +80,13 @@ All E2E test files, test scripts, and test artifacts reside in the `/e2e` direct
 ```text
 e2e/
 ├── auth/
-│   ├── login.spec.ts           # Sign-in, validation, case normalization, invalid credentials
-│   └── session.spec.ts         # Session persistence, sign-out, protected route redirect
+│   ├── login.spec.ts           # Real browser Better Auth sign-in happy path
+│   └── session.spec.ts         # Session persistence across reload, sign-out, route guards
 ├── rbac/
-│   └── admin-routes.spec.ts    # Admin-only access to /users, agent restriction
-├── tickets/                    # Ticket creation, view, message replies (Phase 3+)
-├── fixtures/                   # Shared test fixtures (e.g. auth storage state)
-├── helpers/                    # Test utilities (e.g. auth.ts, db cleaner)
+│   └── admin-routes.spec.ts    # Admin-only access to /users, agent restriction in browser
+├── tickets/
+│   └── ticket-workflow.spec.ts # Cross-boundary lifecycle: Inbound webhook -> UI reply -> follow-up webhook -> thread persistence
+├── helpers/                    # Test utilities (auth.ts)
 ├── scripts/                    # Test database management scripts (setup-test-db.ts)
 ├── playwright-report/          # HTML test execution reports (gitignored)
 └── test-results/               # Failure screenshots & trace videos (gitignored)
@@ -94,42 +94,36 @@ e2e/
 
 ---
 
-## 4. Priority Test Scenarios for Helpdesk
+## 4. Priority Test Scenarios for Helpdesk (Functionality That CANNOT Be Tested With Unit Tests)
 
-When authoring or verifying tests, prioritize real user journeys:
+When authoring or verifying tests, prioritize ONLY functionality that cannot be tested with unit tests:
 
-### 4.1 Authentication & Session Management
-1. **Successful Login**:
-   - Navigate to `/login`.
-   - Fill in `test@example.com` and `uvdb1357`.
-   - Click "Sign in".
-   - Verify redirect to `/` and that user greeting / avatar appears in the Navbar.
-2. **Email Normalization**:
-   - Verify signing in with mixed/upper-case email (`TEST@example.com`) succeeds seamlessly.
-3. **Invalid Credentials**:
-   - Attempt login with incorrect password.
-   - Verify destructive `<Alert>` error banner is visible with appropriate message.
-   - Verify page remains on `/login`.
-4. **Sign Out**:
-   - From authenticated state, click "Sign out".
-   - Verify session termination and redirect back to `/login`.
-5. **Route Protection**:
-   - Direct navigation to `/` while unauthenticated redirects immediately to `/login`.
+### 4.1 Real Browser Authentication & Session Lifecycle
+1. **Real Browser Sign-In**:
+   - Fill credentials in `/login`.
+   - Submit form and verify Better Auth sets real HttpOnly session cookie, redirects to `/`, and Navbar renders authenticated user state.
+2. **Session Persistence Across Reload**:
+   - Verify active session survives full browser reload (`page.reload()`).
+3. **Sign Out Flow**:
+   - Sign out via Navbar and verify browser session cookie is terminated and user is redirected to `/login`.
+4. **Route Guards & Protection**:
+   - Verify unauthenticated visits to `/`, `/users`, and `/tickets` redirect to `/login`.
+   - Verify authenticated visits to `/login` auto-redirect to `/`.
 
-### 4.2 Role-Based Access Control (RBAC)
+### 4.2 Role-Based Access Control (RBAC) in Browser
 1. **Admin Access to `/users`**:
    - Log in as `ADMIN` (`test@example.com`).
-   - Verify "Users" navigation link is visible in the Navbar.
-   - Navigate to `/users` and verify `UsersPage` heading displays.
+   - Verify "Users" navigation link is visible in Navbar and navigates to `/users`.
 2. **Agent Restricted from `/users`**:
    - Log in as `AGENT` (`agent@example.com`).
-   - Verify "Users" link is hidden from the Navbar.
-   - Directly navigating to `/users` redirects to `/` or unauthorized screen.
+   - Verify "Users" link is hidden in Navbar and direct navigation to `/users` redirects to `/`.
 
-### 4.3 Ticket & Workflow Journeys (Phases 3–6)
-* Ticket listing, status filter tabs (`All`, `Open`, `Resolved`, `Closed`).
-* Ticket detail view, conversation thread, AI summary card.
-* Agent manual reply composition and status transitions.
+### 4.3 End-to-End Cross-System Workflows
+* **Inbound Email Webhook to Agent Browser Reply & Follow-Up Lifecycle**:
+  - Inbound email sent via webhook `POST /api/webhooks/email` creates ticket in PostgreSQL.
+  - Authenticated Agent loads ticket in UI and posts an official reply.
+  - Student sends follow-up email (`Re: ...`) to webhook.
+  - Agent refreshes browser and sees the complete conversation thread (both Agent and Customer replies) intact.
 
 ---
 
@@ -208,4 +202,4 @@ Strictly run all commands using **`bun`**:
 3. **No Flaky Tests**: Leverage Playwright's auto-waiting locators, avoid race conditions, and verify network responses when needed.
 4. **Keep Code Clean & Minimal**: Follow conventions defined in `agy-memory.md`—no premature abstractions or mock fluff.
 5. **Report Clearly**: When reporting test run results, provide test name, status, failure stack trace (if any), and exact fix.
-6. **Use E2E Only When Strictly Necessary**: Do NOT duplicate component or unit tests. Detailed UI logic, filter variations, search debouncing, modal transitions, and form validation states belong strictly in component tests (Vitest + React Testing Library). Keep Playwright suites focused strictly on essential cross-system happy paths and hard security boundaries.
+6. **Strict Exclusion of Unit-Tested Logic (Mandatory Rule)**: Never author or keep Playwright E2E tests that are already covered (or can be covered) by unit/component tests. Detailed UI logic, filter variations, search debouncing, column sorting, pagination controls, modal transitions, form validation errors, password visibility toggles, disabled button states, and backend CRUD/schema validation belong strictly in component tests (Vitest + React Testing Library) or server unit tests (Bun test). Reserve Playwright exclusively for functionality that cannot be tested with unit tests: real browser cookie persistence across reload, hard RBAC route guards in the browser, and cross-system asynchronous workflows (e.g. inbound webhook -> database -> browser UI reply -> follow-up email).

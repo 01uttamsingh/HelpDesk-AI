@@ -53,8 +53,13 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 * **Incremental Development**: Build phase-by-phase according to `implementation-plan.md`.
 * **Runtime**: Always use `bun` commands (`bun install`, `bun dev`, `bun run ...`) rather than `npm` or `node`.
 * **Client Data Fetching (Axios & TanStack Query)**: Always use the preconfigured **Axios** client (`client/src/lib/api.ts`) and **TanStack Query** (`useQuery`, `useMutation`) for client-side API requests and server-state management. Never use raw `window.fetch()` for backend API calls.
-* **Component & Unit Testing — Primary Choice (React Testing Library + Vitest)**: Rely primarily on component and unit tests for the majority of the testing suite. UI behavior, component rendering, user interactions, search/filtering, sorting, form validation errors, modal state transitions, and badge styling should all be covered at the component level using React Testing Library (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and the custom `renderWithQuery` wrapper ([`client/src/test/renderWithQuery.tsx`](client/src/test/renderWithQuery.tsx)). Ensure mock isolation via `vi.resetAllMocks()` and `vi.restoreAllMocks()` in `beforeEach`. Run via `bun run test:component` (or `bun run test:unit`).
-* **E2E Testing — Only When Strictly Necessary (Playwright)**: Reserve Playwright E2E tests strictly for essential end-to-end happy paths and critical cross-boundary integrations (e.g., login session persistence across page reloads, webhook ingestion persisting to database and rendering in UI, and hard security/RBAC route guards). Never duplicate component-level test cases (e.g. search filters, modal open/close permutations, validation message variations) in Playwright. For all E2E testing tasks, delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
+* **Component & Unit Testing — Primary Choice (React Testing Library + Vitest + Bun Test)**: Rely primarily on component and unit tests for the vast majority of the testing suite. UI behavior, component rendering, user interactions, search/filtering, sorting, pagination, form validation errors, password toggle buttons, modal state transitions, and badge styling should all be covered at the component level using React Testing Library (`@testing-library/react`), `@testing-library/jest-dom/vitest`, and the custom `renderWithQuery` wrapper ([`client/src/test/renderWithQuery.tsx`](client/src/test/renderWithQuery.tsx)). All backend business logic, validation schemas, and database service queries should be covered with fast unit tests in Bun (`bun test`). Ensure mock isolation via `vi.resetAllMocks()` and `vi.restoreAllMocks()` in `beforeEach`.
+* **E2E Testing — Strictly Exclude Unit-Tested Logic (Playwright Anti-Duplication Rule)**: Never author or maintain Playwright E2E tests for functionality already covered by unit or component tests. Keep ONLY those E2E tests that are absolutely necessary to test behavior that cannot be tested with unit tests:
+  1. Real browser Better Auth session cookie establishment, HttpOnly cookie security, and session persistence across full browser reloads (`page.reload()`).
+  2. Real browser sign out destroying cookies and blocking subsequent page navigation.
+  3. Real browser Role-Based Access Control (RBAC) route guards (verifying `ADMIN` sees and accesses `/users`, while `AGENT` has links hidden and is redirected).
+  4. True cross-boundary asynchronous integration workflows (e.g., external email webhook creates ticket in PostgreSQL -> Agent reviews in UI -> Agent replies in browser -> Customer sends follow-up email via webhook -> conversation thread displays both replies and persists).
+  All form validation, modal open/close permutations, table sorting/filtering UI, search debouncing, button disabled states, and isolated API CRUD operations must be tested strictly via unit tests. For all E2E testing tasks, delegate to or invoke the dedicated `playwright-e2e` subagent (`.agents/agents/playwright-e2e/agent.md`), strictly respecting test database isolation (`helpdesk_test`).
 * **DRY Principle & Function Reusability (Strict Requirement)**: Never duplicate the same logic, schemas, field markup, queries, or utility helpers twice. Instead, use a function, custom hook, base schema, or reusable subcomponent and follow the DRY principle. Keep a single source of truth for all repeated behavior across the entire codebase.
 * **Memory Maintenance**: Keep this file (`agy-memory.md`) updated with all key milestones, architectural shifts, and completed tasks.
 
@@ -888,6 +893,26 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **10 / 10 passed** against `helpdesk_test`, verifying end-to-end ticket closing keeps replies visible, hides reply input, displays closed banner, and restores reply form upon reopening.
   - Production Builds: Both client (`tsc -b && vite build`) and server (`tsc`) pass with 0 errors.
 
+### Milestone 30: Strict E2E Test Anti-Duplication & Unit Test Consolidation
+- **Anti-Duplication Policy Enforcement**:
+  - Removed all redundant Playwright E2E tests that were already covered by unit or component tests (form validation, password toggles, modal open/close transitions, empty search states, sorting, pagination, clear filters, and backend CRUD/schema error codes).
+  - Pruned `e2e/tickets/inbound-email.spec.ts` (API-only checks duplicate of Bun unit tests).
+  - Pruned `e2e/tickets/ticket-list.spec.ts` (table sorting, pagination, search filtering duplicate of Vitest tests).
+  - Removed bloated `e2e/users/` folder (`create-user.spec.ts`, `delete-user.spec.ts`, `edit-user.spec.ts`, `user-crud.spec.ts`, `users-list.spec.ts`).
+  - Added unit test suites to provide 100% unit coverage for replaced behavior:
+    - `client/src/features/auth/__tests__/LoginPage.test.tsx`: Validates required fields, email formatting, password toggle, error alert banners, and redirect logic.
+    - `server/src/features/users/__tests__/user.service.test.ts`: Validates email normalization, user creation, password hashing, active/deleted filtering, password updates, and administrator deletion protection.
+    - `server/src/features/users/__tests__/user.schema.test.ts`: Validates Zod payload validation rules.
+- **Lean, Essential Playwright Suite (Functionality that CANNOT be tested with unit tests)**:
+  - `e2e/auth/login.spec.ts`: Real browser sign-in flow verifying Better Auth HttpOnly cookie creation, home redirect, and navbar user avatar display.
+  - `e2e/auth/session.spec.ts`: Real session persistence across reload (`page.reload()`), real sign-out terminating cookies, route guards for `/`, `/users`, `/tickets`, and authenticated redirect from `/login`.
+  - `e2e/rbac/admin-routes.spec.ts`: Real browser RBAC verifying `ADMIN` sees and accesses `/users`, while `AGENT` has the link hidden and is redirected.
+  - `e2e/tickets/ticket-workflow.spec.ts`: True cross-boundary integration journey (Inbound student email webhook -> Agent reviews in UI -> Agent replies in browser -> Student replies via email webhook -> Full conversation thread visible and persists across reload).
+- **Test Results**:
+  - Server Unit Tests (`bun test`): **127 / 127 passed** across 9 files.
+  - Client Unit Tests (`bun run test:unit`): **132 / 132 passed** across 18 files.
+  - Playwright E2E Tests (`bun run test:e2e`): **10 / 10 passed** in 37s with 0 redundancy.
+
 ---
 
 ## 7. Current Repository Layout
@@ -990,22 +1015,18 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │       └── better-auth-best-practices/
 │   │           └── SKILL.md
 │
-├── e2e/                         # Centralized Playwright test suite & test artifacts
+├── e2e/                         # Centralized Playwright test suite & test artifacts (Essential journeys only)
 │   ├── auth/
-│   │   ├── login.spec.ts        # Login, case-insensitivity, error alert, validation tests
-│   │   └── session.spec.ts      # Session persistence, sign out, and route guard tests
+│   │   ├── login.spec.ts        # Real browser Better Auth sign-in happy path
+│   │   └── session.spec.ts      # Session persistence across reload, sign out, and route guards
+│   ├── rbac/
+│   │   └── admin-routes.spec.ts # Real browser RBAC: Admin vs Agent access to /users
+│   ├── tickets/
+│   │   └── ticket-workflow.spec.ts # Inbound webhook -> UI reply -> follow-up email -> thread persistence
 │   ├── helpers/
 │   │   └── auth.ts              # Test credentials and UI action helpers
 │   ├── scripts/
 │   │   └── setup-test-db.ts     # Test DB creation, migration & seed manager
-│   ├── tickets/
-│   │   └── inbound-email.spec.ts # Webhook ingestion, single model, integer ID, senderName, category
-│   ├── users/
-│   │   ├── user-crud.spec.ts    # Consolidated happy-path CRUD operations (Create, Read, Update, Delete)
-│   │   ├── create-user.spec.ts  # Backend duplicate email conflict & POST RBAC security boundaries
-│   │   ├── edit-user.spec.ts    # Backend duplicate email conflict, password retention & PATCH RBAC
-│   │   ├── delete-user.spec.ts  # Administrator protection & DELETE RBAC security boundaries
-│   │   └── users-list.spec.ts   # Data refresh, empty search state, agent protection & legacy API
 │   ├── playwright-report/       # HTML test execution reports (gitignored)
 │   └── test-results/            # Failure screenshots & trace videos (gitignored)
 ├── playwright.config.ts         # Playwright config (outputDir & reporter in e2e/)
