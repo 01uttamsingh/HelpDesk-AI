@@ -183,6 +183,7 @@ export async function updateUser(
 
 /**
  * Soft deletes an existing user and terminates their active sessions.
+ * Also unassigns all tickets assigned to that user.
  * Admins cannot be deleted under any circumstances.
  */
 export async function deleteUser(
@@ -209,7 +210,15 @@ export async function deleteUser(
       },
     });
 
-    // 2. Immediately revoke all active sessions for this user
+    // 2. Unassign all tickets currently assigned to this user
+    await tx.ticket.updateMany({
+      where: { assignedToId: id },
+      data: {
+        assignedToId: null,
+      },
+    });
+
+    // 3. Immediately revoke all active sessions for this user
     await tx.session.deleteMany({
       where: { userId: id },
     });

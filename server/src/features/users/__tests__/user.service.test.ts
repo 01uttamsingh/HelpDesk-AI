@@ -203,5 +203,78 @@ describe("userService", () => {
         "User not found"
       );
     });
+
+    it("unassigns all tickets assigned to the deleted user", async () => {
+      const timestamp = Date.now();
+      const agent = await createUser({
+        name: "Assigned Agent",
+        email: `assigned-${timestamp}@example.com`,
+        password: "Password123!",
+      });
+
+      const otherAgent = await createUser({
+        name: "Other Agent",
+        email: `other-${timestamp}@example.com`,
+        password: "Password123!",
+      });
+
+      // Create two tickets assigned to the agent to be deleted
+      const ticket1 = await prisma.ticket.create({
+        data: {
+          subject: `Ticket 1 for Agent ${timestamp}`,
+          body: "Ticket 1 body",
+          senderName: "Customer One",
+          senderEmail: "customer1@example.com",
+          assignedToId: agent.id,
+        },
+      });
+
+      const ticket2 = await prisma.ticket.create({
+        data: {
+          subject: `Ticket 2 for Agent ${timestamp}`,
+          body: "Ticket 2 body",
+          senderName: "Customer Two",
+          senderEmail: "customer2@example.com",
+          assignedToId: agent.id,
+        },
+      });
+
+      // Create a ticket assigned to another agent (should NOT be unassigned)
+      const ticket3 = await prisma.ticket.create({
+        data: {
+          subject: `Ticket 3 for Other Agent ${timestamp}`,
+          body: "Ticket 3 body",
+          senderName: "Customer Three",
+          senderEmail: "customer3@example.com",
+          assignedToId: otherAgent.id,
+        },
+      });
+
+      // Verify tickets are currently assigned
+      expect(ticket1.assignedToId).toBe(agent.id);
+      expect(ticket2.assignedToId).toBe(agent.id);
+      expect(ticket3.assignedToId).toBe(otherAgent.id);
+
+      // Delete the first agent
+      const result = await deleteUser(agent.id);
+      expect(result.success).toBe(true);
+
+      // Verify tickets assigned to deleted agent are now unassigned
+      const updatedTicket1 = await prisma.ticket.findUnique({
+        where: { id: ticket1.id },
+      });
+      expect(updatedTicket1?.assignedToId).toBeNull();
+
+      const updatedTicket2 = await prisma.ticket.findUnique({
+        where: { id: ticket2.id },
+      });
+      expect(updatedTicket2?.assignedToId).toBeNull();
+
+      // Verify other agent's ticket remains assigned to other agent
+      const updatedTicket3 = await prisma.ticket.findUnique({
+        where: { id: ticket3.id },
+      });
+      expect(updatedTicket3?.assignedToId).toBe(otherAgent.id);
+    });
   });
 });

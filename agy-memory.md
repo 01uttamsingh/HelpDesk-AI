@@ -915,6 +915,21 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 31: Ticket Unassignment on User Deletion
+- **Requirement & Behavior**:
+  - When a user is deleted (soft-deleted via `deleteUser`), all tickets assigned to that user (`assignedToId === id`) are automatically and atomically unassigned (`assignedToId: null`).
+- **Backend Architecture (`server/src/features/users/user.service.ts`)**:
+  - Updated `deleteUser(id)` transaction to execute `await tx.ticket.updateMany({ where: { assignedToId: id }, data: { assignedToId: null } })` alongside user soft deletion and session revocation.
+  - Added unit test in `server/src/features/users/__tests__/user.service.test.ts` verifying that soft-deleting an agent resets `assignedToId` to `null` across all tickets assigned to that agent while leaving other agents' tickets untouched.
+- **Frontend Cache Synchronization (`client/src/features/users/hooks/useDeleteUser.ts`)**:
+  - Updated `useDeleteUser` mutation hook's `onSuccess` to invalidate both `["users"]` and `["tickets"]` query keys, ensuring ticket lists and detail views immediately reflect the unassigned state upon user deletion without requiring manual page reload.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test`): **130 / 130 passed** across 9 files.
+  - Client Unit Tests (`bun run test:unit`): **134 / 134 passed** across 18 files.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile cleanly with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
