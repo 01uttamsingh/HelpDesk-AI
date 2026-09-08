@@ -24,6 +24,7 @@ model User {
   sessions        Session[]
   accounts        Account[]
   assignedTickets Ticket[]
+  replies         TicketReply[]
 
   @@unique([email])
   @@index([deletedAt])
@@ -98,6 +99,12 @@ enum TicketCategory {
   REFUND_REQUEST
 }
 
+enum ReplySenderType {
+  AGENT
+  CUSTOMER
+  AI
+}
+
 model Ticket {
   id           Int             @id @default(autoincrement())
   subject      String
@@ -111,6 +118,7 @@ model Ticket {
   messageId    String?         @map("message_id")
   assignedToId String?         @map("assigned_to_id")
   assignedTo   User?           @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  replies      TicketReply[]
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
@@ -121,4 +129,22 @@ model Ticket {
   @@index([messageId])
   @@map("tickets")
 }
+
+model TicketReply {
+  id         Int             @id @default(autoincrement())
+  ticketId   Int             @map("ticket_id")
+  ticket     Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId     String?         @map("user_id")
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  senderType ReplySenderType @default(AGENT) @map("sender_type")
+  body       String          @db.Text
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  @@index([ticketId])
+  @@index([userId])
+  @@index([senderType])
+  @@map("ticket_replies")
+}
+
 

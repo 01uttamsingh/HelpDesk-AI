@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { ticketService, TicketServiceError } from "../ticket.service";
 import { ticketIngestService } from "../ticket-ingest.service";
-import { TicketCategory, TicketStatus, TicketPriority } from "@prisma/client";
+import { TicketCategory, TicketStatus, TicketPriority, ReplySenderType } from "@prisma/client";
 import prisma from "../../../prisma";
 
 describe("ticketService.getAllTickets", () => {
@@ -529,6 +529,238 @@ describe("ticketService.updateTicket", () => {
     }
   });
 });
+
+describe("ticketService.createReply and getRepliesByTicketId", () => {
+  it("creates an AGENT reply with valid user and returns reply with user details", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Agent ${timestamp}`,
+        email: `agent.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Reply Test ${timestamp}`,
+      text: "Initial question",
+    });
+
+    const reply = await ticketService.createReply(
+      ticket.id,
+      agent.id,
+      "We are working on your issue."
+    );
+
+    expect(reply.id).toBeGreaterThan(0);
+    expect(reply.ticketId).toBe(ticket.id);
+    expect(reply.userId).toBe(agent.id);
+    expect(reply.senderType).toBe(ReplySenderType.AGENT);
+    expect(reply.body).toBe("We are working on your issue.");
+    expect(reply.user).not.toBeNull();
+    expect(reply.user?.name).toBe(`Agent ${timestamp}`);
+    expect(reply.user?.role).toBe("AGENT");
+  });
+
+  it("creates a CUSTOMER reply with null userId and senderType CUSTOMER", async () => {
+    const timestamp = Date.now();
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Customer Reply Test ${timestamp}`,
+      text: "Help needed",
+    });
+
+    const reply = await ticketService.createReply(
+      ticket.id,
+      null,
+      "Here is additional info from the student.",
+      { senderType: ReplySenderType.CUSTOMER }
+    );
+
+    expect(reply.id).toBeGreaterThan(0);
+    expect(reply.ticketId).toBe(ticket.id);
+    expect(reply.userId).toBeNull();
+    expect(reply.senderType).toBe(ReplySenderType.CUSTOMER);
+    expect(reply.body).toBe("Here is additional info from the student.");
+  });
+
+  it("updates ticket updatedAt and optional status when reply is submitted", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Agent Resolver ${timestamp}`,
+        email: `resolver.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Status Update on Reply ${timestamp}`,
+      text: "Please resolve this",
+    });
+
+    expect(ticket.status).toBe(TicketStatus.OPEN);
+
+    await ticketService.createReply(
+      ticket.id,
+      agent.id,
+      "This issue is now resolved!",
+      { status: TicketStatus.RESOLVED }
+    );
+
+    const updated = await ticketService.getTicketById(ticket.id);
+    expect(updated?.status).toBe(TicketStatus.RESOLVED);
+    expect(updated?.replies?.length).toBe(1);
+    expect(updated?.replies?.[0].body).toBe("This issue is now resolved!");
+  });
+
+  it("returns replies in chronological order via getRepliesByTicketId and getTicketById", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Order Agent ${timestamp}`,
+        email: `order.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Order Test ${timestamp}`,
+      text: "Order content",
+    });
+
+    const r1 = await ticketService.createReply(ticket.id, agent.id, "First reply");
+    await new Promise((res) => setTimeout(res, 20));
+    const r2 = await ticketService.createReply(
+      ticket.id,
+      null,
+      "Second reply from customer",
+      { senderType: ReplySenderType.CUSTOMER }
+    );
+    await new Promise((res) => setTimeout(res, 20));
+    const r3 = await ticketService.createReply(ticket.id, agent.id, "Third reply");
+
+    const replies = await ticketService.getRepliesByTicketId(ticket.id);
+    expect(replies.length).toBe(3);
+    expect(replies[0].id).toBe(r1.id);
+    expect(replies[1].id).toBe(r2.id);
+    expect(replies[2].id).toBe(r3.id);
+
+    const fullTicket = await ticketService.getTicketById(ticket.id);
+    expect(fullTicket?.replies?.length).toBe(3);
+    expect(fullTicket?.replies?.[0].body).toBe("First reply");
+    expect(fullTicket?.replies?.[1].senderType).toBe(ReplySenderType.CUSTOMER);
+    expect(fullTicket?.replies?.[2].body).toBe("Third reply");
+  });
+
+  it("throws 404 TicketServiceError when ticket does not exist", async () => {
+    try {
+      await ticketService.createReply(999999999, "user-id", "Some reply");
+      expect(true).toBe(false);
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(404);
+      expect(err.message).toBe("Ticket not found");
+    }
+  });
+
+  it("throws 400 TicketServiceError when agent user is deactivated or does not exist", async () => {
+    const timestamp = Date.now();
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Deactivated User Test ${timestamp}`,
+      text: "Inquiry",
+    });
+
+    const deactivatedAgent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Deactivated Agent ${timestamp}`,
+        email: `deactivated.${timestamp}@example.com`,
+        role: "AGENT",
+        deletedAt: new Date(),
+      },
+    });
+
+    try {
+      await ticketService.createReply(ticket.id, deactivatedAgent.id, "Attempted reply");
+      expect(true).toBe(false);
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toBe("User not found or deactivated");
+    }
+  });
+
+  it("cascades deletion so deleting a ticket removes its replies", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Cascade Agent ${timestamp}`,
+        email: `cascade.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Cascade Delete Test ${timestamp}`,
+      text: "Cascade content",
+    });
+
+    await ticketService.createReply(ticket.id, agent.id, "Reply to be deleted");
+
+    const repliesBefore = await prisma.ticketReply.findMany({
+      where: { ticketId: ticket.id },
+    });
+    expect(repliesBefore.length).toBe(1);
+
+    await prisma.ticket.delete({ where: { id: ticket.id } });
+
+    const repliesAfter = await prisma.ticketReply.findMany({
+      where: { ticketId: ticket.id },
+    });
+    expect(repliesAfter.length).toBe(0);
+  });
+
+  it("throws 400 TicketServiceError when attempting to reply to a closed ticket", async () => {
+    const timestamp = Date.now();
+    const agent = await prisma.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        name: `Closed Agent ${timestamp}`,
+        email: `closed.${timestamp}@example.com`,
+        role: "AGENT",
+      },
+    });
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `customer.${timestamp}@example.com`,
+      subject: `Closed Ticket Reply Test ${timestamp}`,
+      text: "Problem description",
+    });
+
+    // Close the ticket
+    await ticketService.updateTicket(ticket.id, { status: TicketStatus.CLOSED });
+
+    try {
+      await ticketService.createReply(ticket.id, agent.id, "Attempted reply on closed ticket");
+      expect(true).toBe(false);
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toBe("Cannot add replies to a closed ticket");
+    }
+  });
+});
+
 
 
 

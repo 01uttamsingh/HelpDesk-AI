@@ -1,9 +1,11 @@
 import prisma from "../../prisma";
-import type { Ticket, Prisma } from "@prisma/client";
+import { TicketStatus, ReplySenderType, type Ticket, type Prisma } from "@prisma/client";
 import type {
   TicketFilterQuery,
   TicketCounts,
   PaginatedTicketsResult,
+  TicketReplyItem,
+  TicketWithDetails,
 } from "./ticket.types";
 import type { UpdateTicketInput } from "./ticket.schema";
 
@@ -18,9 +20,9 @@ export class TicketServiceError extends Error {
 
 export class TicketService {
   /**
-   * Fetch a single ticket by its auto-increment integer ID.
+   * Fetch a single ticket by its auto-increment integer ID with replies and assignedTo.
    */
-  async getTicketById(id: number): Promise<Ticket | null> {
+  async getTicketById(id: number): Promise<TicketWithDetails | null> {
     return prisma.ticket.findUnique({
       where: { id },
       include: {
@@ -30,6 +32,19 @@ export class TicketService {
             name: true,
             email: true,
             role: true,
+          },
+        },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
           },
         },
       },
@@ -136,7 +151,7 @@ export class TicketService {
    * Assign or reassign a ticket to a user, or unassign if assignedToId is null.
    * Validates that the ticket exists, and if assignedToId is provided, validates that the user exists and is not soft-deleted.
    */
-  async assignTicket(ticketId: number, assignedToId: string | null): Promise<Ticket> {
+  async assignTicket(ticketId: number, assignedToId: string | null): Promise<TicketWithDetails> {
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
     });
@@ -168,6 +183,19 @@ export class TicketService {
             role: true,
           },
         },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -197,7 +225,7 @@ export class TicketService {
    * Partially updates a ticket's fields (status, category, priority, assignedToId).
    * Validates ticket existence and ensures assigned users exist and are active.
    */
-  async updateTicket(ticketId: number, input: UpdateTicketInput): Promise<Ticket> {
+  async updateTicket(ticketId: number, input: UpdateTicketInput): Promise<TicketWithDetails> {
     const existingTicket = await prisma.ticket.findUnique({
       where: { id: ticketId },
     });
@@ -228,6 +256,118 @@ export class TicketService {
       data: dataToUpdate,
       include: {
         assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Create a new reply for a ticket.
+   * Handles AGENT replies (with active user validation) and CUSTOMER replies.
+   * Updates ticket's updatedAt and optional status.
+   */
+  async createReply(
+    ticketId: number,
+    userId: string | null,
+    body: string,
+    options?: {
+      senderType?: ReplySenderType;
+      status?: TicketStatus;
+    }
+  ): Promise<TicketReplyItem> {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new TicketServiceError("Ticket not found", 404);
+    }
+
+    if (ticket.status === TicketStatus.CLOSED) {
+      throw new TicketServiceError("Cannot add replies to a closed ticket", 400);
+    }
+
+    const senderType: ReplySenderType =
+      options?.senderType ?? (userId ? "AGENT" : "CUSTOMER");
+
+    if (senderType === "AGENT" && userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, deletedAt: true, role: true },
+      });
+
+      if (!user || user.deletedAt) {
+        throw new TicketServiceError("User not found or deactivated", 400);
+      }
+    }
+
+    const [reply] = await prisma.$transaction([
+      prisma.ticketReply.create({
+        data: {
+          ticketId,
+          userId: senderType === "AGENT" ? userId : null,
+          senderType,
+          body,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+      }),
+      prisma.ticket.update({
+        where: { id: ticketId },
+        data: {
+          updatedAt: new Date(),
+          ...(options?.status ? { status: options.status } : {}),
+        },
+      }),
+    ]);
+
+    return reply;
+  }
+
+  /**
+   * Retrieve all replies for a ticket ordered chronologically.
+   */
+  async getRepliesByTicketId(ticketId: number): Promise<TicketReplyItem[]> {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new TicketServiceError("Ticket not found", 404);
+    }
+
+    return prisma.ticketReply.findMany({
+      where: { ticketId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        user: {
           select: {
             id: true,
             name: true,

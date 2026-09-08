@@ -6,9 +6,11 @@ import {
   ticketQuerySchema,
   assignTicketSchema,
   updateTicketSchema,
+  createReplySchema,
 } from "./ticket.schema";
 import { ticketIngestService } from "./ticket-ingest.service";
 import { ticketService, TicketServiceError } from "./ticket.service";
+import type { AuthenticatedRequest } from "../auth";
 
 export class TicketController {
   /**
@@ -244,6 +246,112 @@ export class TicketController {
       res.status(500).json({
         success: false,
         error: "Failed to update ticket",
+      });
+    }
+  }
+
+  /**
+   * POST /api/tickets/:id/replies
+   * Post a reply to a ticket as the authenticated user.
+   */
+  async createReply(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const parsedBody = createReplySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        res.status(400).json({
+          success: false,
+          error: "Validation error",
+          details: parsedBody.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      const userId = req.user?.id || req.session?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized: Authentication required",
+        });
+        return;
+      }
+
+      const reply = await ticketService.createReply(
+        parsedParams.data.id,
+        userId,
+        parsedBody.data.body,
+        {
+          senderType: "AGENT",
+          status: parsedBody.data.status,
+        }
+      );
+
+      res.status(201).json({
+        success: true,
+        data: reply,
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to post ticket reply:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to post ticket reply",
+      });
+    }
+  }
+
+  /**
+   * GET /api/tickets/:id/replies
+   * Retrieve all replies for a ticket.
+   */
+  async getReplies(req: Request, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const replies = await ticketService.getRepliesByTicketId(parsedParams.data.id);
+
+      res.status(200).json({
+        success: true,
+        data: replies,
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to retrieve ticket replies:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to retrieve ticket replies",
       });
     }
   }

@@ -119,4 +119,16 @@ export const updateTicketSchema = z
 
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 
+export const createReplySchema = z.object({
+  body: z
+    .string({ required_error: "Reply message is required" })
+    .trim()
+    .min(1, "Reply message cannot be empty")
+    .max(10000, "Reply message cannot exceed 10,000 characters"),
+  status: z.nativeEnum(TicketStatus).optional(),
+});
+
+export type CreateReplyInput = z.infer<typeof createReplySchema>;
+
+
 

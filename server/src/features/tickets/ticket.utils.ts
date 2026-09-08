@@ -56,3 +56,15 @@ export function cleanSubject(subject?: string | null): string {
   }
   return subject.trim();
 }
+
+/**
+ * Normalizes email subject line by stripping common reply/forward prefixes (e.g. "Re:", "RE:", "Fwd:").
+ */
+export function normalizeSubject(subject?: string | null): string {
+  if (!subject) return "";
+  return subject
+    .replace(/^(\s*(re|fwd|fw)\s*:\s*)+/i, "")
+    .trim()
+    .toLowerCase();
+}
+

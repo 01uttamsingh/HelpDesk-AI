@@ -54,5 +54,7 @@ function Button({
   )
 }
 
+export type ButtonProps = ButtonPrimitive.Props & VariantProps<typeof buttonVariants>;
+
 // eslint-disable-next-line react-refresh/only-export-components
 export { Button, buttonVariants }

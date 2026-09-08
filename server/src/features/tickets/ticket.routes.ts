@@ -14,5 +14,8 @@ ticketRoutes.get("/assignees", requireAuth, (req, res) => ticketController.getAs
 ticketRoutes.get("/:id", requireAuth, (req, res) => ticketController.getTicketById(req, res));
 ticketRoutes.patch("/:id", requireAuth, (req, res) => ticketController.updateTicket(req, res));
 ticketRoutes.patch("/:id/assign", requireAuth, (req, res) => ticketController.assignTicket(req, res));
+ticketRoutes.get("/:id/replies", requireAuth, (req, res) => ticketController.getReplies(req, res));
+ticketRoutes.post("/:id/replies", requireAuth, (req, res) => ticketController.createReply(req, res));
+
 
 

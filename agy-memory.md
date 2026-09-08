@@ -826,6 +826,70 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 27: Ticket Replies & Conversation Thread (Full-Stack & E2E)
+- **Database Schema & Migrations**:
+  - Defined `enum ReplySenderType { AGENT, CUSTOMER, AI }` in `server/prisma/schema.prisma`.
+  - Added `model TicketReply` with `id`, `ticketId` (with `onDelete: Cascade`), `userId` (with `onDelete: SetNull`), `senderType`, `body`, and timestamps, mapped to table `ticket_replies`.
+  - Added relations `replies TicketReply[]` to both `Ticket` and `User`.
+  - Created migration `20260908081522_add_ticket_replies` and deployed to both development DB `helpdesk` and test DB `helpdesk_test`.
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma`)**:
+  - `ticket.types.ts`: Re-exported `ReplySenderType`, `TicketReply`, defined `TicketReplyAuthor`, `TicketReplyItem`, and `TicketWithDetails`.
+  - `ticket.schema.ts`: Added `createReplySchema` (Zod validation for body min 1, max 10000 chars, optional `status`).
+  - `ticket.service.ts`:
+    - Updated `getTicketById(id)` to include `replies` ordered chronologically (`createdAt: asc`) with user projection (`id`, `name`, `email`, `role`).
+    - Added `createReply(ticketId, userId, body, options)`: verifies ticket exists, verifies agent is not soft-deleted, creates reply record, updates ticket `updatedAt` and optional `status` in an atomic transaction.
+    - Added `getRepliesByTicketId(ticketId)`: fetches all replies for a ticket chronologically.
+  - `ticket.utils.ts`: Added `normalizeSubject` helper stripping common reply/forward prefixes (`Re:`, `RE:`, `Fwd:`, `FW:`).
+  - `ticket-ingest.service.ts`: Updated `ingestInboundEmail` to detect when an incoming webhook email comes from the same sender with matching subject (direct match or `normalizeSubject` match). Instead of duplicating tickets, it atomically creates a `TicketReply` with `senderType: CUSTOMER`, re-opens the ticket (`status: OPEN`), and refreshes `updatedAt`.
+  - `ticket.controller.ts`: Added `createReply` and `getReplies` controller handlers.
+  - `ticket.routes.ts`: Mounted `GET /api/tickets/:id/replies` and `POST /api/tickets/:id/replies` under `requireAuth`.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - `components/ui/textarea.tsx`: Built accessible shadcn Textarea primitive.
+  - `types/index.ts`: Added `ReplySenderType`, `TicketReplyAuthor`, `TicketReplyItem`, and `TicketItem.replies`.
+  - `api/tickets.api.ts`: Added `createTicketReply` and `getTicketReplies`.
+  - `hooks/useCreateReply.ts`: TanStack Query mutation hook optimistically updating query cache `["tickets", ticketId]` and invalidating list queries.
+  - `components/TicketRepliesThread.tsx`: Renders conversation thread. Distinguishes Agent replies (using `reply.user?.name` and Admin/Agent badge) from Customer replies (resolving `ticket.senderName` and `ticket.senderEmail` with Customer badge). Displays formatted timestamps and clean body formatting. Handles empty state gracefully.
+  - `components/TicketReplyForm.tsx`: Reply composer card below the thread with Textarea, validation error messaging, optional status dropdown ("Keep current", "Open", "Resolved", "Closed"), submit button with loading spinner, and destructive error alert.
+  - `pages/TicketDetailPage.tsx`: Integrated `<TicketRepliesThread>` and `<TicketReplyForm>` directly below the main customer message card.
+  - `index.ts`: Re-exported all new reply components and hooks.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test`): **108 / 108 passed** across 7 test files (including new unit tests for `normalizeSubject`, `ingestInboundEmail` matching same sender and exact/Re: subject, re-opening resolved tickets, and distinct ticket creation for different subjects).
+  - Client Vitest Tests (`bun run test:unit`): **112 / 112 passed** across 13 test files.
+  - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **10 / 10 passed** against `helpdesk_test`, including E2E test verifying customer follow-up webhook emails append to thread with `Customer` badge and sender details.
+  - Production Builds:
+- **Milestone 28: Ticket Details Modular Refactoring (Zero Function & UI Change)**:
+  - `components/TicketDetails.tsx`: Extracted basic ticket details (header metadata: id, status badge, priority badge, category badge, subject heading, and message card with customer avatar, sender name, sender email, formatted timestamp, and body) into a dedicated component. Strictly excludes replies.
+  - `components/UpdateTicket.tsx`: Extracted the entire right sidebar column (Ticket Details card with status select, priority badge, category select, assignee select with spinners and error alerts, creation/updated dates, and Customer Details card). Accepts explicit props or defaults gracefully to TanStack Query hooks (`useAssignableUsers`, `useAssignTicket`, `useUpdateTicket`).
+  - `components/TicketDetailSkeleton.tsx`: Extracted the full loading skeleton for ticket details (`data-testid="ticket-detail-skeleton"`), keeping layout hierarchy, skeleton dimensions, and responsive grid structure identical.
+  - `components/BackToTicketsButton.tsx`: Extracted the reusable `<Link to="/tickets"><Button variant="default" size="sm" className="gap-2" data-testid="back-to-tickets-btn"><ArrowLeft className="h-4 w-4" />Back to Tickets</Button></Link>` component.
+  - `pages/TicketDetailPage.tsx`: Cleaned and modularized page orchestrator down to ~167 lines, cleanly delegating responsibilities to the newly extracted components while maintaining 100% test ID fidelity and visual layout parity.
+  - `components/ui/button.tsx`: Exported `ButtonProps` type for clean reusable button prop typing.
+  - `index.ts`: Re-exported `TicketDetails`, `UpdateTicket`, `TicketDetailSkeleton`, and `BackToTicketsButton`.
+  - **Testing & Verification**:
+    - Client Unit Tests: **123 / 123 passed** across 17 test suites (including dedicated unit test suites for `TicketDetails.test.tsx`, `UpdateTicket.test.tsx`, `TicketDetailSkeleton.test.tsx`, and `BackToTicketsButton.test.tsx`).
+    - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **10 / 10 passed** against `helpdesk_test`.
+    - Production Build: `bun run build` in `client` compiled and bundled cleanly with 0 TypeScript or Vite errors.
+
+---
+
+### Milestone 29: Closed Ticket Replies Protection & Mutation Cache Preservation
+- **Preserve Existing Replies on Closed Tickets**:
+  - When a ticket status is set to `CLOSED`, all existing replies in the conversation thread remain visible and completely intact in the UI ("keep the replies as it is do not remove them").
+- **Prevent Reply Submissions on Closed Tickets**:
+  - `TicketReplyForm.tsx`: If `currentStatus === "CLOSED"`, replaces the reply composer form with a banner card (`data-testid="ticket-closed-reply-disabled"`) featuring a lock icon and message: *"This ticket is closed. New replies cannot be added to a closed ticket. Reopen the ticket to continue the conversation."* Textarea and submit button are completely hidden while closed.
+  - Dynamically restores the reply composer when the ticket status is reopened (e.g. from `CLOSED` back to `OPEN` via the sidebar dropdown).
+  - `ticket.service.ts`: Added validation in `createReply` rejecting reply attempts on closed tickets with a 400 error: `TicketServiceError("Cannot add replies to a closed ticket", 400)`.
+- **Query Cache & API Mutation Defense-in-Depth**:
+  - `server/src/features/tickets/ticket.service.ts`: Updated `updateTicket` and `assignTicket` to include `replies` (ordered chronologically by `createdAt: asc` with user relations) and return `Promise<TicketWithDetails>`, ensuring backend mutation responses carry full ticket state.
+  - `client/src/features/tickets/hooks/useUpdateTicket.ts` & `useAssignTicket.ts`: Updated `setQueryData` cache updates with `replies: updatedTicket.replies ?? prev.replies` so status and assignee changes never overwrite or drop existing replies from the client cache.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test`): **109 / 109 passed** across 7 test files, verifying `createReply` rejects replies to closed tickets with a 400 error.
+  - Client Vitest Tests (`bun run test`): **125 / 125 passed** across 17 test files, verifying `TicketReplyForm` renders the closed banner and hides form inputs when `currentStatus === "CLOSED"`, and `TicketDetailPage` keeps replies visible when closed.
+  - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **10 / 10 passed** against `helpdesk_test`, verifying end-to-end ticket closing keeps replies visible, hides reply input, displays closed banner, and restores reply form upon reopening.
+  - Production Builds: Both client (`tsc -b && vite build`) and server (`tsc`) pass with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -866,12 +930,12 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   └── index.ts     # Users barrel export
 │   │   │   └── tickets/         # Tickets feature module
 │   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById)
-│   │   │       ├── components/  # TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
-│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket, useUpdateTicket
+│   │   │       ├── components/  # TicketDetails, UpdateTicket, TicketDetailSkeleton, BackToTicketsButton, TicketRepliesThread, TicketReplyForm, TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
+│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket, useUpdateTicket, useCreateReply
 │   │   │       ├── pages/       # TicketsPage.tsx, TicketDetailPage.tsx
 │   │   │       ├── types/       # TicketItem, TicketFilters, PaginationMeta, etc.
 │   │   │       ├── utils/       # date.ts (formatDate helper)
-│   │   │       ├── __tests__/   # TicketsTable, TicketsFilter, TicketsPage, TicketDetailPage
+│   │   │       ├── __tests__/   # TicketsTable, TicketsFilter, TicketsPage, TicketDetailPage, TicketDetails, UpdateTicket, TicketDetailSkeleton, BackToTicketsButton, TicketRepliesThread, TicketReplyForm
 │   │   │       └── index.ts     # Tickets barrel export
 │   │   ├── lib/                 # Shared core utilities (api.ts, query-client.ts, utils.ts)
 │   │   ├── pages/               # Cross-cutting root pages & backward-compat re-exports

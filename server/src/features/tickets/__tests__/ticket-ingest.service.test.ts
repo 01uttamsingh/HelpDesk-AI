@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { ticketIngestService } from "../ticket-ingest.service";
 import prisma from "../../../prisma";
-import { TicketCategory } from "@prisma/client";
+import { TicketCategory, TicketStatus, ReplySenderType } from "@prisma/client";
 
 describe("ticketIngestService", () => {
   it("ingests inbound email with display name and creates a Ticket with integer ID and null category", async () => {
@@ -101,4 +101,119 @@ describe("ticketIngestService", () => {
       expect(stored?.category).toBe(cat);
     }
   });
+
+  it("appends inbound email as a CUSTOMER reply when sender and exact subject match an existing ticket", async () => {
+    const timestamp = Date.now();
+    const sender = `customer.${timestamp}@example.com`;
+    const subject = `Postgres Connection Issue ${timestamp}`;
+
+    // 1. Initial email creates the ticket
+    const initialTicket = await ticketIngestService.ingestInboundEmail({
+      from: `Alice <${sender}>`,
+      subject,
+      text: "I cannot connect to Postgres.",
+    });
+
+    expect(initialTicket.isReply).toBe(false);
+
+    // 2. Follow-up email with same sender and same subject
+    const followUp = await ticketIngestService.ingestInboundEmail({
+      from: `Alice <${sender}>`,
+      subject,
+      text: "Here is my error message: ECONNREFUSED 127.0.0.1:5433",
+    });
+
+    expect(followUp.isReply).toBe(true);
+    expect(followUp.id).toBe(initialTicket.id);
+    expect(followUp.reply).toBeDefined();
+    expect(followUp.reply?.ticketId).toBe(initialTicket.id);
+    expect(followUp.reply?.senderType).toBe(ReplySenderType.CUSTOMER);
+    expect(followUp.reply?.userId).toBeNull();
+    expect(followUp.reply?.body).toBe("Here is my error message: ECONNREFUSED 127.0.0.1:5433");
+
+    // Verify stored in database
+    const replies = await prisma.ticketReply.findMany({
+      where: { ticketId: initialTicket.id },
+    });
+    expect(replies.length).toBe(1);
+    expect(replies[0].senderType).toBe(ReplySenderType.CUSTOMER);
+    expect(replies[0].body).toBe("Here is my error message: ECONNREFUSED 127.0.0.1:5433");
+  });
+
+  it("appends inbound email as a CUSTOMER reply when subject has 'Re:' prefix", async () => {
+    const timestamp = Date.now();
+    const sender = `student.${timestamp}@example.com`;
+    const subject = `Vite React 19 Bug ${timestamp}`;
+
+    const initialTicket = await ticketIngestService.ingestInboundEmail({
+      from: `Bob <${sender}>`,
+      subject,
+      text: "Build fails with React 19.",
+    });
+
+    // Customer replies from email client which prepends "Re: "
+    const replyEmail = await ticketIngestService.ingestInboundEmail({
+      from: `Bob <${sender}>`,
+      subject: `Re: ${subject}`,
+      text: "Never mind, I updated vite plugin and it works now.",
+    });
+
+    expect(replyEmail.isReply).toBe(true);
+    expect(replyEmail.id).toBe(initialTicket.id);
+    expect(replyEmail.reply?.senderType).toBe(ReplySenderType.CUSTOMER);
+    expect(replyEmail.reply?.body).toBe("Never mind, I updated vite plugin and it works now.");
+  });
+
+  it("re-opens a RESOLVED ticket to OPEN when a customer replies via email", async () => {
+    const timestamp = Date.now();
+    const sender = `reopen.${timestamp}@example.com`;
+    const subject = `Login trouble ${timestamp}`;
+
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `Carol <${sender}>`,
+      subject,
+      text: "Cannot login",
+    });
+
+    // Mark ticket as RESOLVED
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { status: TicketStatus.RESOLVED },
+    });
+
+    // Customer replies
+    const replyResult = await ticketIngestService.ingestInboundEmail({
+      from: `Carol <${sender}>`,
+      subject: `Re: ${subject}`,
+      text: "Actually the problem came back today.",
+    });
+
+    expect(replyResult.isReply).toBe(true);
+    expect(replyResult.status).toBe(TicketStatus.OPEN);
+
+    const dbTicket = await prisma.ticket.findUnique({ where: { id: ticket.id } });
+    expect(dbTicket?.status).toBe(TicketStatus.OPEN);
+  });
+
+  it("creates a separate new ticket when the same customer sends an email with a different subject", async () => {
+    const timestamp = Date.now();
+    const sender = `samecustomer.${timestamp}@example.com`;
+
+    const ticket1 = await ticketIngestService.ingestInboundEmail({
+      from: sender,
+      subject: `First topic ${timestamp}`,
+      text: "Topic 1",
+    });
+
+    const ticket2 = await ticketIngestService.ingestInboundEmail({
+      from: sender,
+      subject: `Second totally different topic ${timestamp}`,
+      text: "Topic 2",
+    });
+
+    expect(ticket1.isReply).toBe(false);
+    expect(ticket2.isReply).toBe(false);
+    expect(ticket1.id).not.toBe(ticket2.id);
+  });
 });
+

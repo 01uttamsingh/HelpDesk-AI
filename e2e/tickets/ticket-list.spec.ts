@@ -429,10 +429,139 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await signOutViaUI(page);
   });
 
+  test("allows agent to post a reply to a ticket and displays it in the conversation thread with persistence", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+    const subject = `Reply Feature E2E [${timestamp}]`;
+    const replyMessage = `This is an official agent reply sent at ${timestamp}.`;
+
+    // 1. Ingest inbound ticket
+    const res = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Student Query <query.${timestamp}@example.com>`,
+        subject,
+        text: "I need help with my course access.",
+        category: "General Question",
+      },
+    });
+    expect(res.status()).toBe(201);
+    const { data: ticket } = await res.json();
+
+    // 2. Login as agent and navigate to ticket details
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto(`/tickets/${ticket.id}`);
+
+    // Verify ticket loaded and empty replies state is shown
+    await expect(page.getByTestId("ticket-detail-subject")).toHaveText(subject);
+    await expect(page.getByTestId("no-replies-message")).toBeVisible();
+
+    // 3. Post a reply
+    const replyInput = page.getByTestId("reply-body-input");
+    await expect(replyInput).toBeVisible();
+    await replyInput.fill(replyMessage);
+
+    const submitBtn = page.getByTestId("submit-reply-button");
+    await submitBtn.click();
+
+    // 4. Verify reply appears in conversation thread
+    await expect(page.getByTestId("replies-thread")).toBeVisible();
+    await expect(page.getByText(replyMessage)).toBeVisible();
+    await expect(page.getByTestId("no-replies-message")).not.toBeVisible();
+
+    // Input should be cleared
+    await expect(replyInput).toHaveValue("");
+
+    // 5. Reload page to verify persistence in PostgreSQL
+    await page.reload();
+    await expect(page.getByTestId("replies-thread")).toBeVisible();
+    await expect(page.getByText(replyMessage)).toBeVisible();
+
+    // 6. Close ticket from ticket details page and verify replies are kept while reply form is stopped
+    const statusSelect = page.getByTestId("status-select");
+    await statusSelect.selectOption("CLOSED");
+    await expect(page.getByTestId("ticket-status-badge").first()).toHaveText("Closed");
+
+    // Existing replies remain visible as-is
+    await expect(page.getByTestId("replies-thread")).toBeVisible();
+    await expect(page.getByText(replyMessage)).toBeVisible();
+
+    // Reply form is stopped and closed banner is displayed
+    await expect(page.getByTestId("ticket-closed-reply-disabled")).toBeVisible();
+    await expect(page.getByTestId("reply-body-input")).not.toBeVisible();
+
+    // 7. Re-open ticket and verify reply form becomes available again
+    await statusSelect.selectOption("OPEN");
+    await expect(page.getByTestId("ticket-status-badge").first()).toHaveText("Open");
+    await expect(page.getByTestId("reply-body-input")).toBeVisible();
+    await expect(page.getByTestId("ticket-closed-reply-disabled")).not.toBeVisible();
+
+    await signOutViaUI(page);
+  });
+
+  test("ingests customer follow-up email from webhook as a CUSTOMER reply in the thread", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+    const sender = `student.${timestamp}@example.com`;
+    const subject = `Build error on Windows [${timestamp}]`;
+    const customerFollowUp = `Here is the stack trace for the build error at ${timestamp}.`;
+
+    // 1. Initial inbound email creates the ticket
+    const res1 = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Diana Student <${sender}>`,
+        subject,
+        text: "I am getting an error when running bun build on Windows.",
+      },
+    });
+    expect(res1.status()).toBe(201);
+    const { data: ticket } = await res1.json();
+
+    // 2. Customer replies via email (same sender, "Re: " subject)
+    const res2 = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Diana Student <${sender}>`,
+        subject: `Re: ${subject}`,
+        text: customerFollowUp,
+      },
+    });
+    expect(res2.status()).toBe(201);
+    const { data: replyResult } = await res2.json();
+    expect(replyResult.id).toBe(ticket.id);
+    expect(replyResult.isReply).toBe(true);
+
+    // 3. Agent navigates to ticket details page
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto(`/tickets/${ticket.id}`);
+
+    // Verify customer's initial inquiry
+    await expect(page.getByTestId("ticket-detail-subject")).toHaveText(subject);
+    await expect(page.getByTestId("ticket-detail-body")).toHaveText(
+      "I am getting an error when running bun build on Windows."
+    );
+
+    // 4. Verify conversation thread renders the customer follow-up reply
+    await expect(page.getByTestId("replies-thread")).toBeVisible();
+    await expect(page.getByText(customerFollowUp)).toBeVisible();
+
+    // Verify customer badge and customer author name
+    await expect(page.getByText("Customer").first()).toBeVisible();
+    await expect(page.getByText("Diana Student").first()).toBeVisible();
+
+    await signOutViaUI(page);
+  });
+
   test("redirects unauthenticated visitor from /tickets to /login", async ({
     page,
   }) => {
     await page.goto("/tickets");
     await expect(page).toHaveURL(/\/login/);
   });
+
 });
+

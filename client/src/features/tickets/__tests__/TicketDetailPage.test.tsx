@@ -515,4 +515,138 @@ describe("TicketDetailPage", () => {
       expect(screen.getByTestId("ticket-update-error")).toBeInTheDocument();
     });
   });
+
+  it("renders conversation thread and reply form below the message card", async () => {
+    const ticketWithReplies: TicketItem = {
+      ...mockTicket,
+      replies: [
+        {
+          id: 50,
+          ticketId: 101,
+          userId: "user-agent-1",
+          senderType: "AGENT",
+          body: "Hello, I am looking into your issue.",
+          createdAt: "2026-09-08T10:00:00.000Z",
+          updatedAt: "2026-09-08T10:00:00.000Z",
+          user: {
+            id: "user-agent-1",
+            name: "Agent Sarah",
+            email: "sarah@example.com",
+            role: "AGENT",
+          },
+        },
+      ],
+    };
+
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: ticketWithReplies },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("replies-thread")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("reply-item-50")).toBeInTheDocument();
+    expect(screen.getByTestId("reply-author-50")).toHaveTextContent("Agent Sarah");
+    expect(screen.getByTestId("reply-body-50")).toHaveTextContent("Hello, I am looking into your issue.");
+    expect(screen.getByTestId("ticket-reply-form-card")).toBeInTheDocument();
+    expect(screen.getByTestId("reply-body-input")).toBeInTheDocument();
+  });
+
+  it("allows submitting a reply from the details page and clears input", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    const postSpy = vi.spyOn(api, "post").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          id: 51,
+          ticketId: 101,
+          userId: "user-agent-1",
+          senderType: "AGENT",
+          body: "Here is the solution to your issue.",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          user: {
+            id: "user-agent-1",
+            name: "Agent Sarah",
+            email: "sarah@example.com",
+            role: "AGENT",
+          },
+        },
+      },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("reply-body-input")).toBeInTheDocument();
+    });
+
+    const input = screen.getByTestId("reply-body-input");
+    await user.type(input, "Here is the solution to your issue.");
+    await user.click(screen.getByTestId("submit-reply-button"));
+
+    expect(postSpy).toHaveBeenCalledWith("/api/tickets/101/replies", {
+      body: "Here is the solution to your issue.",
+      status: undefined,
+    });
+
+    await waitFor(() => {
+      expect(input).toHaveValue("");
+    });
+  });
+
+  it("keeps replies visible but disables adding new replies when ticket status is CLOSED", async () => {
+    const closedTicketWithReplies: TicketItem = {
+      ...mockTicket,
+      status: "CLOSED",
+      replies: [
+        {
+          id: 70,
+          ticketId: 101,
+          userId: "user-agent-1",
+          senderType: "AGENT",
+          body: "This issue has been addressed and the ticket is now closed.",
+          createdAt: "2026-09-08T11:00:00.000Z",
+          updatedAt: "2026-09-08T11:00:00.000Z",
+          user: {
+            id: "user-agent-1",
+            name: "Agent Sarah",
+            email: "sarah@example.com",
+            role: "AGENT",
+          },
+        },
+      ],
+    };
+
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: closedTicketWithReplies },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-subject")).toBeInTheDocument();
+    });
+
+    // 1. Replies thread is still rendered and visible
+    expect(screen.getByTestId("replies-thread")).toBeInTheDocument();
+    expect(screen.getByTestId("reply-item-70")).toBeInTheDocument();
+    expect(
+      screen.getByText("This issue has been addressed and the ticket is now closed.")
+    ).toBeInTheDocument();
+
+    // 2. Reply form is stopped/disabled with informative closed message
+    expect(screen.getByTestId("ticket-closed-reply-disabled")).toBeInTheDocument();
+    expect(screen.getByText("This ticket is closed")).toBeInTheDocument();
+    expect(screen.queryByTestId("reply-body-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("submit-reply-button")).not.toBeInTheDocument();
+  });
 });
+

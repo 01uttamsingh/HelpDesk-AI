@@ -12,6 +12,26 @@ export interface TicketAssignedUser {
   role: string;
 }
 
+export type ReplySenderType = "AGENT" | "CUSTOMER" | "AI";
+
+export interface TicketReplyAuthor {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface TicketReplyItem {
+  id: number;
+  ticketId: number;
+  userId?: string | null;
+  user?: TicketReplyAuthor | null;
+  senderType: ReplySenderType;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TicketItem {
   id: number;
   subject: string;
@@ -25,6 +45,7 @@ export interface TicketItem {
   messageId?: string | null;
   assignedToId?: string | null;
   assignedTo?: TicketAssignedUser | null;
+  replies?: TicketReplyItem[];
   createdAt: string;
   updatedAt: string;
 }

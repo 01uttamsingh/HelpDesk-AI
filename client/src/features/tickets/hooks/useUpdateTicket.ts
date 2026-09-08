@@ -8,8 +8,15 @@ export function useUpdateTicket(ticketId: number) {
   return useMutation<TicketItem, Error, UpdateTicketInput>({
     mutationFn: (data: UpdateTicketInput) => updateTicket(ticketId, data),
     onSuccess: (updatedTicket) => {
-      // Update specific ticket in cache
-      queryClient.setQueryData(["tickets", ticketId], updatedTicket);
+      // Update specific ticket in cache, preserving existing replies
+      queryClient.setQueryData(["tickets", ticketId], (prev: TicketItem | undefined) => {
+        if (!prev) return updatedTicket;
+        return {
+          ...prev,
+          ...updatedTicket,
+          replies: updatedTicket.replies ?? prev.replies,
+        };
+      });
       // Invalidate tickets list and stats queries without refetching this specific ticket
       queryClient.invalidateQueries({
         predicate: (query) =>

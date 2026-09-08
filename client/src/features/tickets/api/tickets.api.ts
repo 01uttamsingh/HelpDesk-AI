@@ -8,6 +8,7 @@ import type {
   TicketStatus,
   TicketCategory,
   TicketPriority,
+  TicketReplyItem,
 } from "../types";
 
 export interface GetTicketsResponse {
@@ -126,5 +127,33 @@ export async function updateTicket(
   const res = await api.patch<UpdateTicketResponse>(`/api/tickets/${id}`, data);
   return res.data.data;
 }
+
+export interface CreateReplyResponse {
+  success: boolean;
+  data: TicketReplyItem;
+}
+
+export interface GetRepliesResponse {
+  success: boolean;
+  data: TicketReplyItem[];
+}
+
+export async function createTicketReply(
+  ticketId: number,
+  body: string,
+  status?: TicketStatus
+): Promise<TicketReplyItem> {
+  const res = await api.post<CreateReplyResponse>(`/api/tickets/${ticketId}/replies`, {
+    body,
+    status,
+  });
+  return res.data.data;
+}
+
+export async function getTicketReplies(ticketId: number): Promise<TicketReplyItem[]> {
+  const res = await api.get<GetRepliesResponse>(`/api/tickets/${ticketId}/replies`);
+  return res.data.data;
+}
+
 
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { parseEmailAddress, cleanSubject, deriveNameFromEmail } from "../ticket.utils";
+import { parseEmailAddress, cleanSubject, deriveNameFromEmail, normalizeSubject } from "../ticket.utils";
 
 describe("ticket.utils", () => {
   describe("parseEmailAddress", () => {
@@ -74,4 +74,32 @@ describe("ticket.utils", () => {
       expect(cleanSubject(undefined)).toBe("(No Subject)");
     });
   });
+
+  describe("normalizeSubject", () => {
+    it("strips Re: and RE: prefixes and lowercases", () => {
+      expect(normalizeSubject("Re: How do I setup Vite?")).toBe("how do i setup vite?");
+      expect(normalizeSubject("RE: How do I setup Vite?")).toBe("how do i setup vite?");
+      expect(normalizeSubject("re:  How do I setup Vite?")).toBe("how do i setup vite?");
+    });
+
+    it("strips nested or chained reply prefixes", () => {
+      expect(normalizeSubject("Re: RE: Re: Cannot connect to DB")).toBe("cannot connect to db");
+    });
+
+    it("strips Fwd: and FW: prefixes", () => {
+      expect(normalizeSubject("Fwd: Course materials")).toBe("course materials");
+      expect(normalizeSubject("FW: Course materials")).toBe("course materials");
+    });
+
+    it("handles plain subjects without prefixes", () => {
+      expect(normalizeSubject("Billing inquiry")).toBe("billing inquiry");
+    });
+
+    it("handles null, undefined, or empty string", () => {
+      expect(normalizeSubject("")).toBe("");
+      expect(normalizeSubject(null)).toBe("");
+      expect(normalizeSubject(undefined)).toBe("");
+    });
+  });
 });
+

@@ -1,4 +1,11 @@
-import type { Ticket, TicketStatus, TicketPriority, TicketCategory } from "@prisma/client";
+import type {
+  Ticket,
+  TicketStatus,
+  TicketPriority,
+  TicketCategory,
+  TicketReply,
+  ReplySenderType,
+} from "@prisma/client";
 
 export interface InboundEmailPayload {
   from: string;
@@ -71,5 +78,22 @@ export interface TicketFilterQuery {
   pageSize?: number;
 }
 
-export type { Ticket, TicketStatus, TicketPriority, TicketCategory };
+export interface TicketReplyAuthor {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface TicketReplyItem extends TicketReply {
+  user?: TicketReplyAuthor | null;
+}
+
+export interface TicketWithDetails extends Ticket {
+  assignedTo?: TicketReplyAuthor | null;
+  replies?: TicketReplyItem[];
+}
+
+export type { Ticket, TicketStatus, TicketPriority, TicketCategory, TicketReply, ReplySenderType };
+
 
