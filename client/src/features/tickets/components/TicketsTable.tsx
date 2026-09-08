@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   useReactTable,
   getCoreRowModel,
@@ -26,7 +27,10 @@ import { Button } from "@/components/ui/button";
 import { TicketStatusBadge } from "./TicketStatusBadge";
 import { TicketPriorityBadge } from "./TicketPriorityBadge";
 import { TicketCategoryBadge } from "./TicketCategoryBadge";
+import { formatDate } from "../utils/date";
 import type { TicketItem, PaginationMeta } from "../types";
+
+export { formatDate };
 
 export interface TicketsTableProps {
   tickets: TicketItem[];
@@ -40,21 +44,6 @@ export interface TicketsTableProps {
   pagination?: PaginationMeta;
   onPageChange?: (newPage: number) => void;
   onPageSizeChange?: (newPageSize: number) => void;
-}
-
-export function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 export function TicketsTable({
@@ -90,9 +79,14 @@ export function TicketsTable({
                 <TicketIcon className="h-3.5 w-3.5" />
               </div>
               <div className="space-y-0.5 min-w-0">
-                <span className="font-semibold text-foreground truncate block">
+                <Link
+                  to={`/tickets/${ticket.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold text-foreground hover:text-primary hover:underline transition-colors truncate block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-xs"
+                  data-testid={`ticket-subject-${ticket.id}`}
+                >
                   {ticket.subject}
-                </span>
+                </Link>
                 <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
                   {ticket.body}
                 </p>

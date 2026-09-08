@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { TicketsTable } from "../components/TicketsTable";
 import type { TicketItem } from "../types";
+
+function renderTable(props: React.ComponentProps<typeof TicketsTable>) {
+  return render(
+    <MemoryRouter>
+      <TicketsTable {...props} />
+    </MemoryRouter>
+  );
+}
 
 const mockTickets: TicketItem[] = [
   {
@@ -33,15 +42,13 @@ const mockTickets: TicketItem[] = [
 
 describe("TicketsTable", () => {
   it("renders tickets list ordered as provided (newest first)", () => {
-    render(
-      <TicketsTable
-        tickets={mockTickets}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-      />
-    );
+    renderTable({
+      tickets: mockTickets,
+      isLoading: false,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+    });
 
     const rows = screen.getAllByTestId(/^ticket-row-/);
     expect(rows).toHaveLength(2);
@@ -56,16 +63,32 @@ describe("TicketsTable", () => {
     expect(screen.getByText("Uncategorized")).toBeInTheDocument();
   });
 
+  it("renders ticket subjects as links pointing to /tickets/:id", () => {
+    renderTable({
+      tickets: mockTickets,
+      isLoading: false,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+    });
+
+    const link2 = screen.getByTestId("ticket-subject-2");
+    expect(link2).toHaveAttribute("href", "/tickets/2");
+    expect(link2).toHaveTextContent("Newer Ticket");
+
+    const link1 = screen.getByTestId("ticket-subject-1");
+    expect(link1).toHaveAttribute("href", "/tickets/1");
+    expect(link1).toHaveTextContent("Older Ticket");
+  });
+
   it("renders skeleton rows when loading", () => {
-    render(
-      <TicketsTable
-        tickets={[]}
-        isLoading={true}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-      />
-    );
+    renderTable({
+      tickets: [],
+      isLoading: true,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+    });
 
     const skeletons = screen.getAllByTestId("ticket-skeleton-row");
     expect(skeletons.length).toBeGreaterThan(0);
@@ -73,15 +96,13 @@ describe("TicketsTable", () => {
   });
 
   it("renders empty state when no tickets exist", () => {
-    render(
-      <TicketsTable
-        tickets={[]}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-      />
-    );
+    renderTable({
+      tickets: [],
+      isLoading: false,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+    });
 
     expect(screen.getByText("No tickets yet")).toBeInTheDocument();
     expect(screen.queryByTestId("clear-filters-button")).not.toBeInTheDocument();
@@ -91,15 +112,13 @@ describe("TicketsTable", () => {
     const user = userEvent.setup();
     const handleClear = vi.fn();
 
-    render(
-      <TicketsTable
-        tickets={[]}
-        isLoading={false}
-        searchQuery="nonexistent"
-        hasActiveFilters={true}
-        onClearFilters={handleClear}
-      />
-    );
+    renderTable({
+      tickets: [],
+      isLoading: false,
+      searchQuery: "nonexistent",
+      hasActiveFilters: true,
+      onClearFilters: handleClear,
+    });
 
     expect(screen.getByText("No matching tickets found")).toBeInTheDocument();
     const clearBtn = screen.getByTestId("clear-filters-button");
@@ -110,17 +129,15 @@ describe("TicketsTable", () => {
   });
 
   it("renders sortable column headers with appropriate sort indicators", () => {
-    render(
-      <TicketsTable
-        tickets={mockTickets}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-        sorting={[{ id: "createdAt", desc: true }]}
-        onSortingChange={vi.fn()}
-      />
-    );
+    renderTable({
+      tickets: mockTickets,
+      isLoading: false,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+      sorting: [{ id: "createdAt", desc: true }],
+      onSortingChange: vi.fn(),
+    });
 
     // Created is sorted descending
     expect(screen.getByTestId("sort-header-createdAt")).toBeInTheDocument();
@@ -136,17 +153,15 @@ describe("TicketsTable", () => {
   });
 
   it("renders ascending sort indicator when column is sorted asc", () => {
-    render(
-      <TicketsTable
-        tickets={mockTickets}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-        sorting={[{ id: "priority", desc: false }]}
-        onSortingChange={vi.fn()}
-      />
-    );
+    renderTable({
+      tickets: mockTickets,
+      isLoading: false,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+      sorting: [{ id: "priority", desc: false }],
+      onSortingChange: vi.fn(),
+    });
 
     expect(screen.getByTestId("sort-asc-priority")).toBeInTheDocument();
   });
@@ -155,17 +170,15 @@ describe("TicketsTable", () => {
     const user = userEvent.setup();
     const handleSortingChange = vi.fn();
 
-    render(
-      <TicketsTable
-        tickets={mockTickets}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-        sorting={[{ id: "createdAt", desc: true }]}
-        onSortingChange={handleSortingChange}
-      />
-    );
+    renderTable({
+      tickets: mockTickets,
+      isLoading: false,
+      searchQuery: "",
+      hasActiveFilters: false,
+      onClearFilters: vi.fn(),
+      sorting: [{ id: "createdAt", desc: true }],
+      onSortingChange: handleSortingChange,
+    });
 
     const priorityHeader = screen.getByTestId("sort-header-priority");
     await user.click(priorityHeader);
@@ -179,21 +192,23 @@ describe("TicketsTable", () => {
     const handlePageSizeChange = vi.fn();
 
     const { rerender } = render(
-      <TicketsTable
-        tickets={mockTickets}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-        pagination={{
-          page: 1,
-          pageSize: 10,
-          totalCount: 35,
-          totalPages: 4,
-        }}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
+      <MemoryRouter>
+        <TicketsTable
+          tickets={mockTickets}
+          isLoading={false}
+          searchQuery=""
+          hasActiveFilters={false}
+          onClearFilters={vi.fn()}
+          pagination={{
+            page: 1,
+            pageSize: 10,
+            totalCount: 35,
+            totalPages: 4,
+          }}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </MemoryRouter>
     );
 
     // Range display
@@ -225,21 +240,23 @@ describe("TicketsTable", () => {
 
     // Re-render on last page (Page 4 of 4)
     rerender(
-      <TicketsTable
-        tickets={mockTickets}
-        isLoading={false}
-        searchQuery=""
-        hasActiveFilters={false}
-        onClearFilters={vi.fn()}
-        pagination={{
-          page: 4,
-          pageSize: 10,
-          totalCount: 35,
-          totalPages: 4,
-        }}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
+      <MemoryRouter>
+        <TicketsTable
+          tickets={mockTickets}
+          isLoading={false}
+          searchQuery=""
+          hasActiveFilters={false}
+          onClearFilters={vi.fn()}
+          pagination={{
+            page: 4,
+            pageSize: 10,
+            totalCount: 35,
+            totalPages: 4,
+          }}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByTestId("pagination-info")).toHaveTextContent("Showing 31 to 35 of 35 tickets");

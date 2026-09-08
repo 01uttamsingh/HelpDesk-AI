@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import type { SortingState } from "@tanstack/react-table";
 import { Ticket, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import type {
 } from "../types";
 
 export function TicketsPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,12 +30,9 @@ export function TicketsPage() {
     { id: "createdAt", desc: true },
   ]);
 
-  const isInitialMount = useRef(true);
-
   // Debounce search query input to avoid spamming the backend API
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (searchQuery === debouncedSearchQuery) {
       return;
     }
     const timer = setTimeout(() => {
@@ -41,7 +40,7 @@ export function TicketsPage() {
       setPage(1);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, debouncedSearchQuery]);
 
   // Derive sort parameters for server query
   const sortBy = (sorting[0]?.id as TicketSortField) || "createdAt";
@@ -194,6 +193,7 @@ export function TicketsPage() {
         searchQuery={searchQuery}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={handleClearFilters}
+        onSelectTicket={(ticket) => navigate(`/tickets/${ticket.id}`)}
         sorting={sorting}
         onSortingChange={setSorting}
         pagination={pagination}

@@ -1,6 +1,7 @@
 import { type ReactElement } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, type MemoryRouterProps } from "react-router-dom";
 
 /**
  * Creates a fresh, isolated TanStack QueryClient configured for unit/component testing
@@ -20,18 +21,29 @@ export function createTestQueryClient() {
   });
 }
 
+export interface RenderWithQueryOptions extends Omit<RenderOptions, "wrapper"> {
+  route?: string;
+  routerProps?: MemoryRouterProps;
+}
+
 /**
- * Custom React Testing Library render wrapper that injects TanStack QueryClientProvider.
+ * Custom React Testing Library render wrapper that injects TanStack QueryClientProvider
+ * and MemoryRouter for router-aware component testing.
  */
 export function renderWithQuery(
   ui: ReactElement,
   client = createTestQueryClient(),
-  options?: Omit<RenderOptions, "wrapper">
+  options?: RenderWithQueryOptions
 ) {
+  const { route = "/", routerProps, ...renderOptions } = options ?? {};
   return {
     ...render(
-      <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
-      options
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[route]} {...routerProps}>
+          {ui}
+        </MemoryRouter>
+      </QueryClientProvider>,
+      renderOptions
     ),
     client,
   };

@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./api/tickets.api";
 export * from "./hooks/useTickets";
+export * from "./hooks/useTicket";
 export * from "./components/TicketStatusBadge";
 export * from "./components/TicketPriorityBadge";
 export * from "./components/TicketCategoryBadge";
@@ -8,3 +9,5 @@ export * from "./components/TicketStatsCards";
 export * from "./components/TicketsFilter";
 export * from "./components/TicketsTable";
 export * from "./pages/TicketsPage";
+export * from "./pages/TicketDetailPage";
+export * from "./utils/date";

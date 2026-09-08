@@ -730,6 +730,43 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 24: Ticket Detail Page & Subject Click Navigation (Full-Stack & E2E)
+- **Ticket List Subject & Row Navigation (`client/src/features/tickets/components/TicketsTable.tsx` & `TicketsPage.tsx`)**:
+  - Wrapped ticket subject with accessible React Router `<Link to={`/tickets/${ticket.id}`} ...>` (`data-testid="ticket-subject-${ticket.id}"`).
+  - Wired up `onSelectTicket={(ticket) => navigate(`/tickets/${ticket.id}`)}` in `TicketsPage.tsx`, ensuring clicking the subject text or anywhere on the ticket table row seamlessly navigates to `/tickets/${ticket.id}`.
+  - Added click stop-propagation on the subject link preventing double trigger on row clicks.
+  - Interactive styling: `font-semibold text-foreground hover:text-primary hover:underline transition-colors truncate block`.
+- **Date Formatting Utility (`client/src/features/tickets/utils/date.ts`)**:
+  - Extracted shared `formatDate(dateStr)` helper conforming to the DRY principle. Re-exported from `TicketsTable.tsx` for full backwards compatibility.
+- **Client Server-State Hook (`client/src/features/tickets/hooks/useTicket.ts`)**:
+  - Implemented `useTicket(id)` using TanStack Query (`queryKey: ["tickets", numericId]`).
+  - Validates positive numeric IDs and retrieves data via `getTicketById(numericId)` from `tickets.api.ts`.
+  - Maps 404 to `"Ticket not found"` and 401 to `"You must be signed in to view this ticket."`.
+  - Exposes `ticket`, `isLoading`, `isFetching`, `isNotFound`, `isValidId`, `errorMessage`, and `refetch`.
+- **Ticket Detail Page (`client/src/features/tickets/pages/TicketDetailPage.tsx`)**:
+  - Header: Back button (`<Link to="/tickets">` / `data-testid="back-to-tickets"`) and Refresh button with spinner on fetch (`data-testid="refresh-ticket-button"`).
+  - Ticket Heading & Badges: Ticket ID badge (`#${id}`), `TicketStatusBadge`, `TicketPriorityBadge`, `TicketCategoryBadge`, and prominent subject title.
+  - 2-Column Responsive Layout:
+    - **Message Card**: Customer avatar/initials, customer name (`data-testid="ticket-sender-name"`), email with mailto link (`data-testid="ticket-sender-email"`), formatted timestamp, and message body (`data-testid="ticket-detail-body"`).
+    - **Sidebar Cards**:
+      - "Ticket Details" card displaying status, priority, category, assigned agent (name or "Unassigned"), creation time, and last updated time.
+      - "Customer Details" card displaying sender name and email.
+  - Comprehensive states: Skeleton loading state (`data-testid="ticket-detail-skeleton"`), Not Found / Invalid ID state (`data-testid="ticket-not-found"`), and Destructive Error alert with Retry button (`data-testid="ticket-detail-error"`).
+  - Re-exported via `client/src/pages/TicketDetailPage.tsx` and barrel export `client/src/features/tickets/index.ts`.
+- **Route Guard Registration (`client/src/App.tsx`)**:
+  - Mounted `/tickets/:id` guarded by `<ProtectedRoute>`.
+- **Router Test Harness Enhancement (`client/src/test/renderWithQuery.tsx`)**:
+  - Wrapped `renderWithQuery` with `MemoryRouter` supporting configurable `route` and `routerProps`, simplifying router-aware testing across components.
+- **Search Debounce Fix (`client/src/features/tickets/pages/TicketsPage.tsx`)**:
+  - Replaced brittle `useRef(true)` with clean `searchQuery === debouncedSearchQuery` guard, eliminating unintended page resets in React StrictMode.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test server/src`): **46 / 46 passed** (added `ticketService.getTicketById` test suite for existing record with assignee relation and non-existent record returning null).
+  - Client Vitest Tests (`bun run test:component`): **89 / 89 passed** across 11 test files (8 new tests in `TicketDetailPage.test.tsx` and new subject link test in `TicketsTable.test.tsx`).
+  - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **6 / 6 passed** (including new test verifying navigation from ticket subject to ticket details page, content assertions, and returning via "Back to Tickets").
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile cleanly with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -758,21 +795,31 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── lib/         # Better Auth client instance
 │   │   │   │   ├── pages/       # LoginPage
 │   │   │   │   └── index.ts     # Auth barrel export
-│   │   │   └── users/           # User management feature module
-│   │   │       ├── api/         # users.api.ts (Axios calls: getUsers, createUser, updateUser, deleteUser)
-│   │   │       ├── components/  # UserStatsCards, UsersFilter, UsersTable, PasswordField, CreateUserModal, EditUserModal, DeleteUserModal
-│   │   │       ├── hooks/       # useUsers, useCreateUser, useUpdateUser, useDeleteUser
-│   │   │       ├── pages/       # UsersPage.tsx orchestrator
-│   │   │       ├── schemas/     # user.schema.ts (DRY Zod schemas)
-│   │   │       ├── types/       # UserItem, RoleFilter, inputs
-│   │   │       ├── utils/       # getErrorMessage helper
-│   │   │       ├── __tests__/   # 7 unit/integration test suites
-│   │   │       └── index.ts     # Users barrel export
+│   │   │   ├── users/           # User management feature module
+│   │   │   │   ├── api/         # users.api.ts (Axios calls: getUsers, createUser, updateUser, deleteUser)
+│   │   │   │   ├── components/  # UserStatsCards, UsersFilter, UsersTable, PasswordField, CreateUserModal, EditUserModal, DeleteUserModal
+│   │   │   │   ├── hooks/       # useUsers, useCreateUser, useUpdateUser, useDeleteUser
+│   │   │   │   ├── pages/       # UsersPage.tsx orchestrator
+│   │   │   │   ├── schemas/     # user.schema.ts (DRY Zod schemas)
+│   │   │   │   ├── types/       # UserItem, RoleFilter, inputs
+│   │   │   │   ├── utils/       # getErrorMessage helper
+│   │   │   │   ├── __tests__/   # 7 unit/integration test suites
+│   │   │   │   └── index.ts     # Users barrel export
+│   │   │   └── tickets/         # Tickets feature module
+│   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById)
+│   │   │       ├── components/  # TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
+│   │   │       ├── hooks/       # useTickets, useTicket
+│   │   │       ├── pages/       # TicketsPage.tsx, TicketDetailPage.tsx
+│   │   │       ├── types/       # TicketItem, TicketFilters, PaginationMeta, etc.
+│   │   │       ├── utils/       # date.ts (formatDate helper)
+│   │   │       ├── __tests__/   # TicketsTable, TicketsFilter, TicketsPage, TicketDetailPage
+│   │   │       └── index.ts     # Tickets barrel export
 │   │   ├── lib/                 # Shared core utilities (api.ts, query-client.ts, utils.ts)
 │   │   ├── pages/               # Cross-cutting root pages & backward-compat re-exports
 │   │   │   ├── HomePage.tsx
 │   │   │   ├── LoginPage.tsx
-│   │   │   └── UsersPage.tsx
+│   │   │   ├── UsersPage.tsx
+│   │   │   └── TicketDetailPage.tsx
 │   │   ├── test/                # Shared test wrappers (renderWithQuery.tsx, setup.ts)
 │   │   ├── App.tsx              # Root application router & providers
 │   │   ├── index.css            # Tailwind CSS v4 setup + shadcn default theme

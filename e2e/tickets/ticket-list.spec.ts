@@ -267,6 +267,65 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await signOutViaUI(page);
   });
 
+  test("navigates to ticket details page when clicking subject and returns via back button", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+    const senderName = "Diana Prince";
+    const senderEmail = `diana.${timestamp}@example.com`;
+    const subject = `Ticket Detail Navigation Journey [${timestamp}]`;
+    const bodyText = "I need assistance navigating through ticket details.";
+    const category = "General Question";
+
+    // 1. Create a ticket via inbound webhook
+    const res = await request.post("/api/webhooks/email", {
+      data: {
+        from: `${senderName} <${senderEmail}>`,
+        subject,
+        text: bodyText,
+        category,
+      },
+    });
+    expect(res.status()).toBe(201);
+    const { data: ticket } = await res.json();
+
+    // 2. Login as agent and navigate to /tickets
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto("/tickets");
+    await expect(page.getByRole("heading", { name: /^tickets$/i })).toBeVisible();
+
+    // 3. Locate the created ticket row and click its subject
+    const subjectLink = page.getByTestId(`ticket-subject-${ticket.id}`);
+    await expect(subjectLink).toBeVisible();
+    await subjectLink.click();
+
+    // 4. Verify navigation to ticket details page (/tickets/:id)
+    await expect(page).toHaveURL(`/tickets/${ticket.id}`);
+
+    // 5. Verify ticket details are rendered (subject, sender name, body, badges)
+    await expect(page.getByTestId("ticket-detail-subject")).toHaveText(subject);
+    await expect(page.getByTestId("ticket-sender-name")).toHaveText(senderName);
+    await expect(page.getByTestId("ticket-detail-body")).toContainText(bodyText);
+
+    // Verify badges (status, priority, category)
+    await expect(page.getByTestId("ticket-status-badge").first()).toContainText("Open");
+    await expect(page.getByTestId("ticket-priority-badge").first()).toContainText("Medium");
+    await expect(page.getByTestId("ticket-category-badge").first()).toContainText("General Question");
+
+    // 6. Click "Back to Tickets" and verify return to /tickets
+    const backButton = page.getByTestId("back-to-tickets");
+    await expect(backButton).toBeVisible();
+    await backButton.click();
+
+    await expect(page).toHaveURL("/tickets");
+    await expect(page.getByRole("heading", { name: /^tickets$/i })).toBeVisible();
+    await expect(page.getByTestId("tickets-table")).toBeVisible();
+
+    await signOutViaUI(page);
+  });
+
   test("redirects unauthenticated visitor from /tickets to /login", async ({
     page,
   }) => {

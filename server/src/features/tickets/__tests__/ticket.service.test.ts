@@ -260,3 +260,30 @@ describe("ticketService.getAllTickets", () => {
   });
 });
 
+describe("ticketService.getTicketById", () => {
+  it("returns ticket by id when it exists, including assignedTo user relation", async () => {
+    const timestamp = Date.now();
+    const created = await ticketIngestService.ingestInboundEmail({
+      from: `Customer ${timestamp} <customer.${timestamp}@example.com>`,
+      subject: `Single Ticket Test ${timestamp}`,
+      text: "Detailed content for single ticket inspection",
+      category: TicketCategory.TECHNICAL_QUESTION,
+    });
+
+    const ticket = await ticketService.getTicketById(created.id);
+    expect(ticket).not.toBeNull();
+    expect(ticket?.id).toBe(created.id);
+    expect(ticket?.subject).toBe(`Single Ticket Test ${timestamp}`);
+    expect(ticket?.senderName).toBe(`Customer ${timestamp}`);
+    expect(ticket?.senderEmail).toBe(`customer.${timestamp}@example.com`);
+    expect(ticket?.category).toBe(TicketCategory.TECHNICAL_QUESTION);
+    expect(ticket?.body).toBe("Detailed content for single ticket inspection");
+    expect(ticket?.assignedTo).toBeNull();
+  });
+
+  it("returns null when ticket does not exist", async () => {
+    const ticket = await ticketService.getTicketById(999999999);
+    expect(ticket).toBeNull();
+  });
+});
+
