@@ -121,6 +121,7 @@ describe("ticketIngestService", () => {
       from: `Alice <${sender}>`,
       subject,
       text: "Here is my error message: ECONNREFUSED 127.0.0.1:5433",
+      html: "<p>Here is my error message: ECONNREFUSED 127.0.0.1:5433</p>",
     });
 
     expect(followUp.isReply).toBe(true);
@@ -130,6 +131,7 @@ describe("ticketIngestService", () => {
     expect(followUp.reply?.senderType).toBe(ReplySenderType.CUSTOMER);
     expect(followUp.reply?.userId).toBeNull();
     expect(followUp.reply?.body).toBe("Here is my error message: ECONNREFUSED 127.0.0.1:5433");
+    expect(followUp.reply?.htmlBody).toBe("<p>Here is my error message: ECONNREFUSED 127.0.0.1:5433</p>");
 
     // Verify stored in database
     const replies = await prisma.ticketReply.findMany({
@@ -138,6 +140,7 @@ describe("ticketIngestService", () => {
     expect(replies.length).toBe(1);
     expect(replies[0].senderType).toBe(ReplySenderType.CUSTOMER);
     expect(replies[0].body).toBe("Here is my error message: ECONNREFUSED 127.0.0.1:5433");
+    expect(replies[0].htmlBody).toBe("<p>Here is my error message: ECONNREFUSED 127.0.0.1:5433</p>");
   });
 
   it("appends inbound email as a CUSTOMER reply when subject has 'Re:' prefix", async () => {

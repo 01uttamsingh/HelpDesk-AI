@@ -51,4 +51,32 @@ describe("TicketDetails", () => {
 
     expect(screen.getByTestId("ticket-sender-email")).toHaveTextContent("carlos@example.com");
   });
+
+  it("sanitizes malicious scripts and dangerous attributes in ticket body", () => {
+    const maliciousTicket: TicketItem = {
+      ...mockTicket,
+      body: '<p>Valid message</p><script>alert("xss")</script><img src="x" onerror="alert(1)" />',
+    };
+    render(<TicketDetails ticket={maliciousTicket} />);
+
+    const bodyElement = screen.getByTestId("ticket-detail-body");
+    expect(bodyElement.innerHTML).toContain("<p>Valid message</p>");
+    expect(bodyElement.innerHTML).not.toContain("<script>");
+    expect(bodyElement.innerHTML).not.toContain("alert");
+    expect(bodyElement.innerHTML).not.toContain("onerror");
+  });
+
+  it("safely renders legitimate HTML elements in ticket body", () => {
+    const richTicket: TicketItem = {
+      ...mockTicket,
+      body: '<strong>Bold issue description</strong> with a <a href="https://example.com">link</a>',
+    };
+    render(<TicketDetails ticket={richTicket} />);
+
+    const bodyElement = screen.getByTestId("ticket-detail-body");
+    expect(bodyElement.querySelector("strong")).toHaveTextContent("Bold issue description");
+    const link = bodyElement.querySelector("a");
+    expect(link).toHaveAttribute("href", "https://example.com");
+    expect(link).toHaveTextContent("link");
+  });
 });

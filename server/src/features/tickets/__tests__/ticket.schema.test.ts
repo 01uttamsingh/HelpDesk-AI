@@ -84,6 +84,88 @@ describe("ticket.schema", () => {
         })
       ).toThrow();
     });
+
+    it("rejects fields exceeding max length constraints", () => {
+      const validBase = {
+        from: "student@example.com",
+        text: "Valid email text",
+      };
+
+      // 'from' exceeding 320 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          ...validBase,
+          from: `${"a".repeat(310)}@example.com`,
+        })
+      ).toThrow("Sender 'from' address cannot exceed 320 characters");
+
+      // 'to' exceeding 320 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          ...validBase,
+          to: `${"a".repeat(310)}@example.com`,
+        })
+      ).toThrow("Recipient 'to' address cannot exceed 320 characters");
+
+      // 'subject' exceeding 255 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          ...validBase,
+          subject: "s".repeat(256),
+        })
+      ).toThrow("Subject cannot exceed 255 characters");
+
+      // 'text' exceeding 10,000 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          ...validBase,
+          text: "t".repeat(10001),
+        })
+      ).toThrow("Email text cannot exceed 10,000 characters");
+
+      // 'body' exceeding 10,000 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          from: "student@example.com",
+          body: "b".repeat(10001),
+        })
+      ).toThrow("Email body cannot exceed 10,000 characters");
+
+      // 'html' exceeding 50,000 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          ...validBase,
+          html: "h".repeat(50001),
+        })
+      ).toThrow("Email HTML cannot exceed 50,000 characters");
+
+      // 'messageId' exceeding 255 chars
+      expect(() =>
+        inboundEmailSchema.parse({
+          ...validBase,
+          messageId: `<${"m".repeat(254)}>`,
+        })
+      ).toThrow("Message ID cannot exceed 255 characters");
+    });
+
+    it("accepts fields at the boundary of max length constraints", () => {
+      const boundaryPayload = {
+        from: "a".repeat(320),
+        to: "b".repeat(320),
+        subject: "s".repeat(255),
+        text: "t".repeat(10000),
+        html: "h".repeat(50000),
+        messageId: "m".repeat(255),
+      };
+
+      const parsed = inboundEmailSchema.parse(boundaryPayload);
+      expect(parsed.from).toHaveLength(320);
+      expect(parsed.to).toHaveLength(320);
+      expect(parsed.subject).toHaveLength(255);
+      expect(parsed.text).toHaveLength(10000);
+      expect(parsed.html).toHaveLength(50000);
+      expect(parsed.messageId).toHaveLength(255);
+    });
   });
 
   describe("ticketQuerySchema", () => {

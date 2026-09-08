@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import type { TicketItem } from "../types";
 import { TicketStatusBadge } from "./TicketStatusBadge";
 import { TicketPriorityBadge } from "./TicketPriorityBadge";
@@ -70,9 +71,10 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
           <div
             className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-sans break-words"
             data-testid="ticket-detail-body"
-          >
-            {ticket.body}
-          </div>
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(ticket.body || ""),
+            }}
+          />
         </CardContent>
       </Card>
     </div>

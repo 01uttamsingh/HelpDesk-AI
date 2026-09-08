@@ -32,13 +32,34 @@ export const ticketCategorySchema = z.preprocess(
 
 export const inboundEmailSchema = z
   .object({
-    from: z.string().min(1, "Sender 'from' address is required"),
-    to: z.string().optional(),
-    subject: z.string().optional(),
-    text: z.string().optional(),
-    body: z.string().optional(),
-    html: z.string().optional(),
-    messageId: z.string().optional(),
+    from: z
+      .string()
+      .min(1, "Sender 'from' address is required")
+      .max(320, "Sender 'from' address cannot exceed 320 characters"),
+    to: z
+      .string()
+      .max(320, "Recipient 'to' address cannot exceed 320 characters")
+      .optional(),
+    subject: z
+      .string()
+      .max(255, "Subject cannot exceed 255 characters")
+      .optional(),
+    text: z
+      .string()
+      .max(10000, "Email text cannot exceed 10,000 characters")
+      .optional(),
+    body: z
+      .string()
+      .max(10000, "Email body cannot exceed 10,000 characters")
+      .optional(),
+    html: z
+      .string()
+      .max(50000, "Email HTML cannot exceed 50,000 characters")
+      .optional(),
+    messageId: z
+      .string()
+      .max(255, "Message ID cannot exceed 255 characters")
+      .optional(),
     category: ticketCategorySchema,
   })
   .refine((data) => (data.text && data.text.trim().length > 0) || (data.body && data.body.trim().length > 0), {

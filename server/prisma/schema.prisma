@@ -138,6 +138,7 @@ model TicketReply {
   user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   senderType ReplySenderType @default(AGENT) @map("sender_type")
   body       String          @db.Text
+  htmlBody   String?         @map("html_body") @db.Text
   createdAt  DateTime        @default(now()) @map("created_at")
   updatedAt  DateTime        @updatedAt @map("updated_at")
 

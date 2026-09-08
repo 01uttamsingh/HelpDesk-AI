@@ -28,6 +28,7 @@ export interface TicketReplyItem {
   user?: TicketReplyAuthor | null;
   senderType: ReplySenderType;
   body: string;
+  htmlBody?: string | null;
   createdAt: string;
   updatedAt: string;
 }

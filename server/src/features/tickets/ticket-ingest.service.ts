@@ -54,6 +54,7 @@ export class TicketIngestService {
             userId: null,
             senderType: ReplySenderType.CUSTOMER,
             body,
+            htmlBody: payload.html?.trim() || null,
           },
         }),
         prisma.ticket.update({
