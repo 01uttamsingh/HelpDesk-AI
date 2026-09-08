@@ -665,6 +665,35 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 22: Server-Side Filtering with TanStack Table (Status, Category, Priority, Debounced Search & Global Counts)
+- **Backend Server-Side Filtering Architecture (`server/src/features/tickets/`)**:
+  - `ticket.types.ts`: Added `priority?: TicketPriority` to `TicketFilterQuery` and exported `TicketCounts` interface (`total`, `open`, `resolved`, `closed`).
+  - `ticket.schema.ts`: Updated `normalizeCategory` preprocessor to recognize `"UNCATEGORIZED"`, `"NONE"`, or `"NULL"` and convert to `null`. Added `priority: z.nativeEnum(TicketPriority).optional()` to `ticketQuerySchema`.
+  - `ticket.service.ts`:
+    - Updated `getAllTickets` to check `query.category !== undefined` so `category: null` queries `where.category = null` (`WHERE "category" IS NULL`).
+    - Handled `where.priority = query.priority`.
+    - Added `getTicketCounts()` method executing parallel `prisma.ticket.count()` queries for overall totals and status breakdowns.
+  - `ticket.controller.ts`: Updated `getTickets` to execute `getAllTickets(query)` and `getTicketCounts()` in parallel via `Promise.all` and return `{ success: true, data: tickets, counts }`.
+- **Client Architecture & UI Integration (`client/src/features/tickets/`)**:
+  - `types/index.ts`: Added `PriorityFilter` (`"ALL" | TicketPriority`), `TicketCounts` interface, and added `priority?: PriorityFilter` to `TicketFilters`.
+  - `api/tickets.api.ts`: Updated `getTickets` to forward `status`, `category` (including `"UNCATEGORIZED"`), `priority`, and `search` query parameters to the backend. Returns `GetTicketsResult = { tickets, counts }`.
+  - `hooks/useTickets.ts`: Updated TanStack Query hook to query `GetTicketsResult` with key `["tickets", filters]`, exposing `tickets` and `counts`.
+  - `components/TicketsFilter.tsx`: Added **Priority** filter dropdown (`data-testid="tickets-priority-select"`) with options: `All Priorities`, `Low`, `Medium`, `High`.
+  - `components/TicketsTable.tsx`: Added `manualFiltering: true` to `useReactTable` configuration alongside `manualSorting: true`.
+  - `pages/TicketsPage.tsx`:
+    - Added `priorityFilter` state (`useState<PriorityFilter>("ALL")`).
+    - Added **300ms debounce** on search input (`debouncedSearchQuery`) preventing network spam on keystrokes.
+    - Removed client-side `useMemo` filtering (`filteredTickets`); passes server-filtered tickets directly to `TicketsTable`.
+    - Connected server `counts` to `<TicketStatsCards>` and status tab counters with fallback, ensuring tab numbers remain accurate even when filtering by a specific status.
+    - Updated `hasActiveFilters` and `handleClearFilters` to include `priorityFilter`.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test src`): **42 / 42 passed** (tested `normalizeCategory` uncategorized handling, `ticketQuerySchema` priority validation, and `ticketService` priority/category/status/counts queries).
+  - Client Vitest Tests (`bun run test`): **78 / 78 passed** across 10 test suites (tested Priority select and debounced server-side query parameters in `TicketsPage.test.tsx`).
+  - Playwright E2E Tests (`bunx playwright test`): **47 / 47 passed** across all 8 test files, including new E2E test verifying debounced search, category filter, priority select, and filter reset against PostgreSQL test database.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile cleanly with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text

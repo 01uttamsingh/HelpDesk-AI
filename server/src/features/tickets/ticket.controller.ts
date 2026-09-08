@@ -83,10 +83,14 @@ export class TicketController {
   async getTickets(req: Request, res: Response): Promise<void> {
     try {
       const query = ticketQuerySchema.parse(req.query);
-      const tickets = await ticketService.getAllTickets(query);
+      const [tickets, counts] = await Promise.all([
+        ticketService.getAllTickets(query),
+        ticketService.getTicketCounts(),
+      ]);
       res.status(200).json({
         success: true,
         data: tickets,
+        counts,
       });
     } catch (error: unknown) {
       if (error instanceof ZodError) {

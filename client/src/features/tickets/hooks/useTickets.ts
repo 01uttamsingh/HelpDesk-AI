@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useMemo } from "react";
-import { getTickets } from "../api/tickets.api";
-import type { TicketItem, TicketFilters } from "../types";
+import { getTickets, type GetTicketsResult } from "../api/tickets.api";
+import type { TicketFilters } from "../types";
 
 export function useTickets(filters?: TicketFilters) {
-  const query = useQuery<TicketItem[], Error>({
+  const query = useQuery<GetTicketsResult, Error>({
     queryKey: ["tickets", filters],
     queryFn: () => getTickets(filters),
   });
@@ -27,7 +27,8 @@ export function useTickets(filters?: TicketFilters) {
 
   return {
     ...query,
-    tickets: query.data ?? [],
+    tickets: query.data?.tickets ?? [],
+    counts: query.data?.counts,
     errorMessage,
   };
 }

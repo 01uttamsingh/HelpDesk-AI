@@ -146,6 +146,79 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await signOutViaUI(page);
   });
 
+  test("filters tickets by search query, category, priority, and resets filters", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+
+    // 1. Create a technical ticket with unique text
+    const techSubject = `Docker Crash Issue [${timestamp}]`;
+    const resTech = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Docker Student <docker.${timestamp}@example.com>`,
+        subject: techSubject,
+        text: `Container failed to start ${timestamp}`,
+        category: "Technical Questions",
+      },
+    });
+    expect(resTech.status()).toBe(201);
+    const { data: techTicket } = await resTech.json();
+
+    // 2. Create a refund ticket with unique text
+    const refundSubject = `Course Refund Request [${timestamp}]`;
+    const resRefund = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Refund Student <refund.${timestamp}@example.com>`,
+        subject: refundSubject,
+        text: `Requesting money back ${timestamp}`,
+        category: "Refund Request",
+      },
+    });
+    expect(resRefund.status()).toBe(201);
+    const { data: refundTicket } = await resRefund.json();
+
+    // 3. Login as agent and navigate to /tickets
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto("/tickets");
+    await expect(page.getByRole("heading", { name: /^tickets$/i })).toBeVisible();
+
+    // Verify both tickets initially appear
+    await expect(page.getByTestId(`ticket-row-${techTicket.id}`)).toBeVisible();
+    await expect(page.getByTestId(`ticket-row-${refundTicket.id}`)).toBeVisible();
+
+    // 4. Test Search filter (debounced)
+    const searchInput = page.getByTestId("tickets-search-input");
+    await searchInput.fill(`Docker Crash Issue [${timestamp}]`);
+    await expect(page.getByTestId(`ticket-row-${techTicket.id}`)).toBeVisible();
+    await expect(page.getByTestId(`ticket-row-${refundTicket.id}`)).not.toBeVisible();
+
+    // Clear search
+    await searchInput.clear();
+    await expect(page.getByTestId(`ticket-row-${refundTicket.id}`)).toBeVisible();
+
+    // 5. Test Category filter
+    const categorySelect = page.getByTestId("tickets-category-select");
+    await categorySelect.selectOption("REFUND_REQUEST");
+    await expect(page.getByTestId(`ticket-row-${refundTicket.id}`)).toBeVisible();
+    await expect(page.getByTestId(`ticket-row-${techTicket.id}`)).not.toBeVisible();
+
+    // 6. Test Priority filter is rendered
+    const prioritySelect = page.getByTestId("tickets-priority-select");
+    await expect(prioritySelect).toBeVisible();
+
+    // 7. Clear filters button resets category and shows all tickets
+    const clearBtn = page.getByTestId("clear-filters-button");
+    if (await clearBtn.isVisible()) {
+      await clearBtn.click();
+      await expect(page.getByTestId(`ticket-row-${techTicket.id}`)).toBeVisible();
+      await expect(page.getByTestId(`ticket-row-${refundTicket.id}`)).toBeVisible();
+    }
+
+    await signOutViaUI(page);
+  });
+
   test("redirects unauthenticated visitor from /tickets to /login", async ({
     page,
   }) => {

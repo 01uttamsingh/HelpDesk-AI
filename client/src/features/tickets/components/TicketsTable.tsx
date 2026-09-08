@@ -162,6 +162,7 @@ export function TicketsTable({
     },
     onSortingChange: handleSortingChange,
     manualSorting: true,
+    manualFiltering: true,
     enableSortingRemoval: false,
     getCoreRowModel: getCoreRowModel(),
   });

@@ -31,7 +31,15 @@ export interface TicketItem {
 
 export type StatusFilter = "ALL" | TicketStatus;
 export type CategoryFilter = "ALL" | TicketCategory | "UNCATEGORIZED";
+export type PriorityFilter = "ALL" | TicketPriority;
 export type SortFilter = "newest" | "oldest";
+
+export interface TicketCounts {
+  total: number;
+  open: number;
+  resolved: number;
+  closed: number;
+}
 
 export type TicketSortField =
   | "createdAt"
@@ -48,8 +56,10 @@ export type TicketSortOrder = "asc" | "desc";
 export interface TicketFilters {
   status?: StatusFilter;
   category?: CategoryFilter;
+  priority?: PriorityFilter;
   search?: string;
   sort?: SortFilter;
   sortBy?: TicketSortField;
   sortOrder?: TicketSortOrder;
 }
+

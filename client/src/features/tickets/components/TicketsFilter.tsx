@@ -1,6 +1,6 @@
 import { Search, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { StatusFilter, CategoryFilter, SortFilter } from "../types";
+import type { StatusFilter, CategoryFilter, PriorityFilter, SortFilter } from "../types";
 
 interface TicketsFilterProps {
   searchQuery: string;
@@ -9,6 +9,8 @@ interface TicketsFilterProps {
   onStatusFilterChange: (status: StatusFilter) => void;
   categoryFilter: CategoryFilter;
   onCategoryFilterChange: (category: CategoryFilter) => void;
+  priorityFilter: PriorityFilter;
+  onPriorityFilterChange: (priority: PriorityFilter) => void;
   sortFilter: SortFilter;
   onSortFilterChange: (sort: SortFilter) => void;
   totalCount: number;
@@ -24,6 +26,8 @@ export function TicketsFilter({
   onStatusFilterChange,
   categoryFilter,
   onCategoryFilterChange,
+  priorityFilter,
+  onPriorityFilterChange,
   sortFilter,
   onSortFilterChange,
   totalCount,
@@ -47,7 +51,7 @@ export function TicketsFilter({
           />
         </div>
 
-        {/* Category & Sort Selectors */}
+        {/* Category, Priority & Sort Selectors */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Category Dropdown */}
           <div className="flex items-center gap-1.5">
@@ -66,6 +70,25 @@ export function TicketsFilter({
               <option value="TECHNICAL_QUESTION">Technical Question</option>
               <option value="REFUND_REQUEST">Refund Request</option>
               <option value="UNCATEGORIZED">Uncategorized</option>
+            </select>
+          </div>
+
+          {/* Priority Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="priority-select" className="text-xs font-medium text-muted-foreground">
+              Priority:
+            </label>
+            <select
+              id="priority-select"
+              value={priorityFilter}
+              onChange={(e) => onPriorityFilterChange(e.target.value as PriorityFilter)}
+              className="h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              data-testid="tickets-priority-select"
+            >
+              <option value="ALL">All Priorities</option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
             </select>
           </div>
 

@@ -31,6 +31,13 @@ describe("ticket.schema", () => {
       expect(normalizeCategory("refund")).toBe(TicketCategory.REFUND_REQUEST);
     });
 
+    it("normalizes uncategorized variants to null", () => {
+      expect(normalizeCategory("UNCATEGORIZED")).toBeNull();
+      expect(normalizeCategory("uncategorized")).toBeNull();
+      expect(normalizeCategory("none")).toBeNull();
+      expect(normalizeCategory("null")).toBeNull();
+    });
+
     it("leaves unknown values as-is so Zod validation rejects them", () => {
       expect(normalizeCategory("UNKNOWN_CATEGORY")).toBe("UNKNOWN_CATEGORY");
     });
@@ -119,6 +126,21 @@ describe("ticket.schema", () => {
 
       const parsedNewest = ticketQuerySchema.parse({ sort: "newest" });
       expect(parsedNewest.sort).toBe("newest");
+    });
+
+    it("parses valid priority filter and rejects invalid priority", () => {
+      const parsedHigh = ticketQuerySchema.parse({ priority: "HIGH" });
+      expect(parsedHigh.priority).toBe("HIGH");
+
+      const parsedLow = ticketQuerySchema.parse({ priority: "LOW" });
+      expect(parsedLow.priority).toBe("LOW");
+
+      expect(() => ticketQuerySchema.parse({ priority: "CRITICAL" })).toThrow();
+    });
+
+    it("parses category UNCATEGORIZED as null", () => {
+      const parsed = ticketQuerySchema.parse({ category: "UNCATEGORIZED" });
+      expect(parsed.category).toBeNull();
     });
   });
 });

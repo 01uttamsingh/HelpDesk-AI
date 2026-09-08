@@ -171,4 +171,67 @@ describe("ticketService.getAllTickets", () => {
     const indexZ = ascTickets.findIndex((t) => t.id === tZ.id);
     expect(indexA).toBeLessThan(indexZ);
   });
+
+  it("filters tickets by priority", async () => {
+    const timestamp = Date.now();
+    await prisma.ticket.create({
+      data: {
+        subject: `High Priority Filter ${timestamp}`,
+        body: "High filter body",
+        senderName: "High User",
+        senderEmail: `highfilter.${timestamp}@example.com`,
+        priority: TicketPriority.HIGH,
+      },
+    });
+
+    const highTickets = await ticketService.getAllTickets({
+      priority: TicketPriority.HIGH,
+    });
+    expect(highTickets.length).toBeGreaterThan(0);
+    highTickets.forEach((t) => {
+      expect(t.priority).toBe(TicketPriority.HIGH);
+    });
+  });
+
+  it("filters tickets by uncategorized (category: null)", async () => {
+    const timestamp = Date.now();
+    const uncategorizedTicket = await prisma.ticket.create({
+      data: {
+        subject: `Uncategorized Filter ${timestamp}`,
+        body: "Uncategorized body",
+        senderName: "Uncat User",
+        senderEmail: `uncat.${timestamp}@example.com`,
+        category: null,
+      },
+    });
+
+    const uncatTickets = await ticketService.getAllTickets({
+      category: null,
+    });
+    expect(uncatTickets.length).toBeGreaterThan(0);
+    const found = uncatTickets.some((t) => t.id === uncategorizedTicket.id);
+    expect(found).toBe(true);
+    uncatTickets.forEach((t) => {
+      expect(t.category).toBeNull();
+    });
+  });
+
+  it("filters tickets by status", async () => {
+    const openTickets = await ticketService.getAllTickets({
+      status: TicketStatus.OPEN,
+    });
+    openTickets.forEach((t) => {
+      expect(t.status).toBe(TicketStatus.OPEN);
+    });
+  });
+
+  it("calculates accurate ticket counts across statuses via getTicketCounts", async () => {
+    const counts = await ticketService.getTicketCounts();
+    expect(typeof counts.total).toBe("number");
+    expect(typeof counts.open).toBe("number");
+    expect(typeof counts.resolved).toBe("number");
+    expect(typeof counts.closed).toBe("number");
+    expect(counts.total).toBe(counts.open + counts.resolved + counts.closed);
+  });
 });
+

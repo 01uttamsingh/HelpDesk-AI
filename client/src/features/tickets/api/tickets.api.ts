@@ -1,9 +1,15 @@
 import { api } from "@/lib/api";
-import type { TicketItem, TicketFilters } from "../types";
+import type { TicketItem, TicketFilters, TicketCounts } from "../types";
 
 export interface GetTicketsResponse {
   success: boolean;
   data: TicketItem[];
+  counts?: TicketCounts;
+}
+
+export interface GetTicketsResult {
+  tickets: TicketItem[];
+  counts?: TicketCounts;
 }
 
 export interface GetTicketResponse {
@@ -11,15 +17,19 @@ export interface GetTicketResponse {
   data: TicketItem;
 }
 
-export async function getTickets(filters?: TicketFilters): Promise<TicketItem[]> {
+export async function getTickets(filters?: TicketFilters): Promise<GetTicketsResult> {
   const params: Record<string, string> = {};
 
   if (filters?.status && filters.status !== "ALL") {
     params.status = filters.status;
   }
 
-  if (filters?.category && filters.category !== "ALL" && filters.category !== "UNCATEGORIZED") {
+  if (filters?.category && filters.category !== "ALL") {
     params.category = filters.category;
+  }
+
+  if (filters?.priority && filters.priority !== "ALL") {
+    params.priority = filters.priority;
   }
 
   if (filters?.search && filters.search.trim().length > 0) {
@@ -37,7 +47,10 @@ export async function getTickets(filters?: TicketFilters): Promise<TicketItem[]>
   }
 
   const res = await api.get<GetTicketsResponse>("/api/tickets", { params });
-  return res.data.data;
+  return {
+    tickets: res.data.data,
+    counts: res.data.counts,
+  };
 }
 
 export async function getTicketById(id: number): Promise<TicketItem> {

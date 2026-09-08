@@ -1,6 +1,6 @@
 import prisma from "../../prisma";
 import type { Ticket, Prisma } from "@prisma/client";
-import type { TicketFilterQuery } from "./ticket.types";
+import type { TicketFilterQuery, TicketCounts } from "./ticket.types";
 
 export class TicketService {
   /**
@@ -24,7 +24,7 @@ export class TicketService {
 
   /**
    * Fetch tickets sorted by newest first (createdAt: "desc") by default,
-   * with optional filtering by status, category, search text, or sort order.
+   * with optional filtering by status, category, priority, search text, or sort order.
    */
   async getAllTickets(query?: TicketFilterQuery): Promise<Ticket[]> {
     const where: Prisma.TicketWhereInput = {};
@@ -33,8 +33,12 @@ export class TicketService {
       where.status = query.status;
     }
 
-    if (query?.category) {
+    if (query?.category !== undefined) {
       where.category = query.category;
+    }
+
+    if (query?.priority) {
+      where.priority = query.priority;
     }
 
     if (query?.search && query.search.trim().length > 0) {
@@ -77,6 +81,21 @@ export class TicketService {
       },
     });
   }
+
+  /**
+   * Retrieve total counts of tickets broken down by status.
+   */
+  async getTicketCounts(): Promise<TicketCounts> {
+    const [total, open, resolved, closed] = await Promise.all([
+      prisma.ticket.count(),
+      prisma.ticket.count({ where: { status: "OPEN" } }),
+      prisma.ticket.count({ where: { status: "RESOLVED" } }),
+      prisma.ticket.count({ where: { status: "CLOSED" } }),
+    ]);
+
+    return { total, open, resolved, closed };
+  }
 }
 
 export const ticketService = new TicketService();
+

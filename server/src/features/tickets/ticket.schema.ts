@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TicketCategory, TicketStatus } from "@prisma/client";
+import { TicketCategory, TicketStatus, TicketPriority } from "@prisma/client";
 
 /**
  * Normalizes category inputs into canonical TicketCategory enum values.
@@ -10,6 +10,9 @@ export const normalizeCategory = (val: unknown): unknown => {
   if (val === null || val === "") return null;
   if (typeof val !== "string") return val;
   const upper = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (upper === "UNCATEGORIZED" || upper === "NONE" || upper === "NULL") {
+    return null;
+  }
   if (upper === "GENERAL_QUESTION" || upper === "GENERAL") {
     return TicketCategory.GENERAL_QUESTION;
   }
@@ -67,6 +70,7 @@ export const ticketSortOrderSchema = z.enum(["asc", "desc"]);
 export const ticketQuerySchema = z.object({
   status: z.nativeEnum(TicketStatus).optional(),
   category: ticketCategorySchema,
+  priority: z.nativeEnum(TicketPriority).optional(),
   search: z.string().optional(),
   sort: z.enum(["newest", "oldest"]).optional(),
   sortBy: ticketSortFieldSchema.optional(),

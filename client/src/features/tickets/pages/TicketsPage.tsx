@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import type { SortingState } from "@tanstack/react-table";
 import { Ticket, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { TicketsTable } from "../components/TicketsTable";
 import type {
   StatusFilter,
   CategoryFilter,
+  PriorityFilter,
   SortFilter,
   TicketSortField,
   TicketSortOrder,
@@ -17,11 +18,21 @@ import type {
 
 export function TicketsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("ALL");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("ALL");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
+
+  // Debounce search query input to avoid spamming the backend API
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Derive sort parameters for server query
   const sortBy = (sorting[0]?.id as TicketSortField) || "createdAt";
@@ -35,53 +46,35 @@ export function TicketsPage() {
     setSorting([{ id: "createdAt", desc: newSort === "newest" }]);
   };
 
-  const { tickets, isLoading, isFetching, errorMessage, refetch } = useTickets({
+  const { tickets, counts, isLoading, isFetching, errorMessage, refetch } = useTickets({
+    status: statusFilter,
+    category: categoryFilter,
+    priority: priorityFilter,
+    search: debouncedSearchQuery,
     sortBy,
     sortOrder,
   });
 
-  // Filter tickets (sorting is handled on the server)
-  const filteredTickets = useMemo(() => {
-    return tickets.filter((t) => {
-      const matchesStatus =
-        statusFilter === "ALL" || t.status === statusFilter;
-
-      const matchesCategory =
-        categoryFilter === "ALL"
-          ? true
-          : categoryFilter === "UNCATEGORIZED"
-          ? !t.category
-          : t.category === categoryFilter;
-
-      const q = searchQuery.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        t.subject?.toLowerCase().includes(q) ||
-        t.body?.toLowerCase().includes(q) ||
-        t.senderName?.toLowerCase().includes(q) ||
-        t.senderEmail?.toLowerCase().includes(q);
-
-      return matchesStatus && matchesCategory && matchesSearch;
-    });
-  }, [tickets, statusFilter, categoryFilter, searchQuery]);
-
-  // Ticket counts across whole dataset
-  const totalCount = tickets.length;
-  const openCount = tickets.filter((t) => t.status === "OPEN").length;
-  const resolvedCount = tickets.filter((t) => t.status === "RESOLVED").length;
-  const closedCount = tickets.filter((t) => t.status === "CLOSED").length;
+  // Ticket counts across whole dataset (from server, with fallback)
+  const totalCount = counts?.total ?? tickets.length;
+  const openCount = counts?.open ?? tickets.filter((t) => t.status === "OPEN").length;
+  const resolvedCount = counts?.resolved ?? tickets.filter((t) => t.status === "RESOLVED").length;
+  const closedCount = counts?.closed ?? tickets.filter((t) => t.status === "CLOSED").length;
 
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
     statusFilter !== "ALL" ||
     categoryFilter !== "ALL" ||
+    priorityFilter !== "ALL" ||
     sortBy !== "createdAt" ||
     !sorting[0]?.desc;
 
   const handleClearFilters = () => {
     setSearchQuery("");
+    setDebouncedSearchQuery("");
     setStatusFilter("ALL");
     setCategoryFilter("ALL");
+    setPriorityFilter("ALL");
     setSorting([{ id: "createdAt", desc: true }]);
   };
 
@@ -150,6 +143,8 @@ export function TicketsPage() {
         onStatusFilterChange={setStatusFilter}
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
+        priorityFilter={priorityFilter}
+        onPriorityFilterChange={setPriorityFilter}
         sortFilter={sortFilter}
         onSortFilterChange={handleSortFilterChange}
         totalCount={totalCount}
@@ -160,7 +155,7 @@ export function TicketsPage() {
 
       {/* Tickets Table */}
       <TicketsTable
-        tickets={filteredTickets}
+        tickets={tickets}
         isLoading={isLoading}
         searchQuery={searchQuery}
         hasActiveFilters={hasActiveFilters}

@@ -4,11 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { TicketsFilter } from "../components/TicketsFilter";
 
 describe("TicketsFilter", () => {
-  it("renders search input, category dropdown, sort dropdown, and status tabs", async () => {
+  it("renders search input, category dropdown, priority dropdown, sort dropdown, and status tabs", async () => {
     const user = userEvent.setup();
     const handleSearchChange = vi.fn();
     const handleStatusChange = vi.fn();
     const handleCategoryChange = vi.fn();
+    const handlePriorityChange = vi.fn();
     const handleSortChange = vi.fn();
 
     render(
@@ -19,6 +20,8 @@ describe("TicketsFilter", () => {
         onStatusFilterChange={handleStatusChange}
         categoryFilter="ALL"
         onCategoryFilterChange={handleCategoryChange}
+        priorityFilter="ALL"
+        onPriorityFilterChange={handlePriorityChange}
         sortFilter="newest"
         onSortFilterChange={handleSortChange}
         totalCount={10}
@@ -44,7 +47,12 @@ describe("TicketsFilter", () => {
     await user.selectOptions(categorySelect, "TECHNICAL_QUESTION");
     expect(handleCategoryChange).toHaveBeenCalledWith("TECHNICAL_QUESTION");
 
-    // 4. Sort select
+    // 4. Priority select
+    const prioritySelect = screen.getByTestId("tickets-priority-select");
+    await user.selectOptions(prioritySelect, "HIGH");
+    expect(handlePriorityChange).toHaveBeenCalledWith("HIGH");
+
+    // 5. Sort select
     const sortSelect = screen.getByTestId("tickets-sort-select");
     await user.selectOptions(sortSelect, "oldest");
     expect(handleSortChange).toHaveBeenCalledWith("oldest");

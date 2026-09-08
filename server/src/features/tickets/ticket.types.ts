@@ -40,9 +40,17 @@ export type TicketSortField =
 
 export type TicketSortOrder = "asc" | "desc";
 
+export interface TicketCounts {
+  total: number;
+  open: number;
+  resolved: number;
+  closed: number;
+}
+
 export interface TicketFilterQuery {
   status?: TicketStatus;
   category?: TicketCategory | null;
+  priority?: TicketPriority;
   search?: string;
   sort?: "newest" | "oldest";
   sortBy?: TicketSortField;
@@ -50,3 +58,4 @@ export interface TicketFilterQuery {
 }
 
 export type { Ticket, TicketStatus, TicketPriority, TicketCategory };
+
