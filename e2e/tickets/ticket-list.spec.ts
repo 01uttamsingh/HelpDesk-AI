@@ -375,6 +375,60 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await signOutViaUI(page);
   });
 
+  test("allows agent to update ticket status and category on ticket details page", async ({
+    page,
+    request,
+  }) => {
+    const timestamp = Date.now();
+    const subject = `Update Status and Category E2E [${timestamp}]`;
+
+    // 1. Create a ticket via inbound webhook with OPEN status and GENERAL_QUESTION category
+    const res = await request.post("/api/webhooks/email", {
+      data: {
+        from: `Student Update <student.${timestamp}@example.com>`,
+        subject,
+        text: "Need status and category changed.",
+        category: "General Question",
+      },
+    });
+    expect(res.status()).toBe(201);
+    const { data: ticket } = await res.json();
+
+    // 2. Login as agent and navigate to ticket details
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto(`/tickets/${ticket.id}`);
+
+    // Wait for ticket to load
+    await expect(page.getByTestId("ticket-detail-subject")).toHaveText(subject);
+
+    // Verify initial status and category badges
+    await expect(page.getByTestId("ticket-status-badge").first()).toHaveText("Open");
+    await expect(page.getByTestId("ticket-category-badge").first()).toHaveText("General Question");
+
+    // 3. Change Status to RESOLVED
+    const statusSelect = page.getByTestId("status-select");
+    await expect(statusSelect).toBeVisible();
+    await statusSelect.selectOption("RESOLVED");
+
+    // Verify status badge updates to Resolved
+    await expect(page.getByTestId("ticket-status-badge").first()).toHaveText("Resolved");
+
+    // 4. Change Category to TECHNICAL_QUESTION
+    const categorySelect = page.getByTestId("category-select");
+    await expect(categorySelect).toBeVisible();
+    await categorySelect.selectOption("TECHNICAL_QUESTION");
+
+    // Verify category badge updates to Technical Question
+    await expect(page.getByTestId("ticket-category-badge").first()).toHaveText("Technical Question");
+
+    // 5. Change Category to Uncategorized (empty string)
+    await categorySelect.selectOption("");
+    await expect(page.getByTestId("ticket-category-badge").first()).toHaveText("Uncategorized");
+
+    await signOutViaUI(page);
+  });
+
   test("redirects unauthenticated visitor from /tickets to /login", async ({
     page,
   }) => {

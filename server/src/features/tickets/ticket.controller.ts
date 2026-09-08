@@ -5,6 +5,7 @@ import {
   ticketIdParamSchema,
   ticketQuerySchema,
   assignTicketSchema,
+  updateTicketSchema,
 } from "./ticket.schema";
 import { ticketIngestService } from "./ticket-ingest.service";
 import { ticketService, TicketServiceError } from "./ticket.service";
@@ -189,6 +190,60 @@ export class TicketController {
       res.status(500).json({
         success: false,
         error: "Failed to retrieve assignable users",
+      });
+    }
+  }
+
+  /**
+   * PATCH /api/tickets/:id
+   * Partially updates ticket status, category, priority, and/or assignee.
+   */
+  async updateTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const parsedBody = updateTicketSchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid update payload",
+          details: parsedBody.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      const updatedTicket = await ticketService.updateTicket(
+        parsedParams.data.id,
+        parsedBody.data
+      );
+
+      res.status(200).json({
+        success: true,
+        data: updatedTicket,
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to update ticket:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to update ticket",
       });
     }
   }

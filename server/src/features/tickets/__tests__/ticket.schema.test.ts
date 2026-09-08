@@ -4,8 +4,9 @@ import {
   normalizeCategory,
   ticketQuerySchema,
   assignTicketSchema,
+  updateTicketSchema,
 } from "../ticket.schema";
-import { TicketCategory } from "@prisma/client";
+import { TicketCategory, TicketStatus, TicketPriority } from "@prisma/client";
 
 describe("ticket.schema", () => {
   describe("normalizeCategory", () => {
@@ -182,6 +183,50 @@ describe("ticket.schema", () => {
     it("defaults omitted assignedToId to null", () => {
       const parsed = assignTicketSchema.parse({});
       expect(parsed.assignedToId).toBeNull();
+    });
+  });
+
+  describe("updateTicketSchema", () => {
+    it("parses valid status change", () => {
+      const parsed = updateTicketSchema.parse({ status: TicketStatus.RESOLVED });
+      expect(parsed.status).toBe(TicketStatus.RESOLVED);
+      expect(parsed.category).toBeUndefined();
+    });
+
+    it("parses valid category change with normalization", () => {
+      const parsed = updateTicketSchema.parse({ category: "Technical Questions" });
+      expect(parsed.category).toBe(TicketCategory.TECHNICAL_QUESTION);
+    });
+
+    it("parses category as null when set to UNCATEGORIZED or null", () => {
+      expect(updateTicketSchema.parse({ category: null }).category).toBeNull();
+      expect(updateTicketSchema.parse({ category: "UNCATEGORIZED" }).category).toBeNull();
+      expect(updateTicketSchema.parse({ category: "" }).category).toBeNull();
+    });
+
+    it("parses multiple fields simultaneously", () => {
+      const parsed = updateTicketSchema.parse({
+        status: TicketStatus.CLOSED,
+        category: "Refund Request",
+        priority: TicketPriority.HIGH,
+        assignedToId: "agent-123",
+      });
+      expect(parsed.status).toBe(TicketStatus.CLOSED);
+      expect(parsed.category).toBe(TicketCategory.REFUND_REQUEST);
+      expect(parsed.priority).toBe(TicketPriority.HIGH);
+      expect(parsed.assignedToId).toBe("agent-123");
+    });
+
+    it("rejects empty update payload with no fields", () => {
+      expect(() => updateTicketSchema.parse({})).toThrow();
+    });
+
+    it("rejects invalid status", () => {
+      expect(() => updateTicketSchema.parse({ status: "PENDING" })).toThrow();
+    });
+
+    it("rejects invalid category", () => {
+      expect(() => updateTicketSchema.parse({ category: "INVALID_CAT" })).toThrow();
     });
   });
 });

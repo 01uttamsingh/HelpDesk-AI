@@ -360,4 +360,159 @@ describe("TicketDetailPage", () => {
       expect(screen.getByTestId("assign-error-message")).toBeInTheDocument();
     });
   });
+
+  it("renders status select dropdown with current status pre-selected", async () => {
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status-select")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("status-select")).toHaveValue("OPEN");
+  });
+
+  it("calls update API and updates status when a new status is selected", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    const patchSpy = vi.spyOn(api, "patch").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          ...mockTicket,
+          status: "RESOLVED",
+        },
+      },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status-select")).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getByTestId("status-select");
+    await user.selectOptions(statusSelect, "RESOLVED");
+
+    expect(patchSpy).toHaveBeenCalledWith("/api/tickets/101", {
+      status: "RESOLVED",
+    });
+
+    await waitFor(() => {
+      const statusBadges = screen.getAllByTestId("ticket-status-badge");
+      expect(statusBadges[0]).toHaveTextContent("Resolved");
+    });
+  });
+
+  it("renders category select dropdown with current category pre-selected", async () => {
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("category-select")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("category-select")).toHaveValue("TECHNICAL_QUESTION");
+  });
+
+  it("calls update API and updates category when a new category is selected", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    const patchSpy = vi.spyOn(api, "patch").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          ...mockTicket,
+          category: "REFUND_REQUEST",
+        },
+      },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("category-select")).toBeInTheDocument();
+    });
+
+    const categorySelect = screen.getByTestId("category-select");
+    await user.selectOptions(categorySelect, "REFUND_REQUEST");
+
+    expect(patchSpy).toHaveBeenCalledWith("/api/tickets/101", {
+      category: "REFUND_REQUEST",
+    });
+
+    await waitFor(() => {
+      const categoryBadges = screen.getAllByTestId("ticket-category-badge");
+      expect(categoryBadges[0]).toHaveTextContent("Refund Request");
+    });
+  });
+
+  it("calls update API with null when Uncategorized is selected", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    const patchSpy = vi.spyOn(api, "patch").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          ...mockTicket,
+          category: null,
+        },
+      },
+    });
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("category-select")).toBeInTheDocument();
+    });
+
+    const categorySelect = screen.getByTestId("category-select");
+    await user.selectOptions(categorySelect, "");
+
+    expect(patchSpy).toHaveBeenCalledWith("/api/tickets/101", {
+      category: null,
+    });
+
+    await waitFor(() => {
+      const categoryBadges = screen.getAllByTestId("ticket-category-badge");
+      expect(categoryBadges[0]).toHaveTextContent("Uncategorized");
+    });
+  });
+
+  it("displays error message if updating status or category fails", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(api, "get").mockResolvedValueOnce({
+      data: { success: true, data: mockTicket },
+    });
+
+    vi.spyOn(api, "patch").mockRejectedValueOnce(new Error("Update failed"));
+
+    renderTicketDetail("/tickets/101");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status-select")).toBeInTheDocument();
+    });
+
+    const statusSelect = screen.getByTestId("status-select");
+    await user.selectOptions(statusSelect, "RESOLVED");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-update-error")).toBeInTheDocument();
+    });
+  });
 });

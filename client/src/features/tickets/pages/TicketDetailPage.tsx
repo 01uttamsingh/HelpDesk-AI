@@ -18,6 +18,8 @@ import { TicketPriorityBadge } from "../components/TicketPriorityBadge";
 import { TicketCategoryBadge } from "../components/TicketCategoryBadge";
 import { useTicket } from "../hooks/useTicket";
 import { useAssignTicket, useAssignableUsers } from "../hooks/useAssignTicket";
+import { useUpdateTicket } from "../hooks/useUpdateTicket";
+import type { TicketStatus, TicketCategory } from "../types";
 import { formatDate } from "../utils/date";
 
 export function TicketDetailPage() {
@@ -31,6 +33,12 @@ export function TicketDetailPage() {
     isPending: isAssigning,
     error: assignError,
   } = useAssignTicket(numericId ?? 0);
+  const {
+    mutate: updateTicketMutation,
+    isPending: isUpdating,
+    error: updateError,
+    variables: updateVariables,
+  } = useUpdateTicket(numericId ?? 0);
   const safeAssignees = Array.isArray(assignees) ? assignees : [];
 
   // Loading skeleton state
@@ -260,19 +268,90 @@ export function TicketDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Status</span>
-                <TicketStatusBadge status={ticket.status} />
+              {/* Status Section */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground font-medium">Status</span>
+                  <TicketStatusBadge status={ticket.status} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="ticket-status-select" className="sr-only">
+                    Change Status
+                  </label>
+                  <select
+                    id="ticket-status-select"
+                    aria-label="Change ticket status"
+                    value={ticket.status}
+                    onChange={(e) => {
+                      updateTicketMutation({ status: e.target.value as TicketStatus });
+                    }}
+                    disabled={isUpdating}
+                    className="w-full h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="status-select"
+                  >
+                    <option value="OPEN">Open</option>
+                    <option value="RESOLVED">Resolved</option>
+                    <option value="CLOSED">Closed</option>
+                  </select>
+                  {isUpdating && updateVariables?.status && (
+                    <RefreshCw
+                      className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0"
+                      data-testid="status-updating-spinner"
+                    />
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Priority</span>
+              {/* Priority Section */}
+              <div className="flex items-center justify-between pt-2 border-t border-border/60">
+                <span className="text-muted-foreground font-medium">Priority</span>
                 <TicketPriorityBadge priority={ticket.priority} />
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Category</span>
-                <TicketCategoryBadge category={ticket.category} />
+              {/* Category Section */}
+              <div className="pt-2 border-t border-border/60 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground font-medium">Category</span>
+                  <TicketCategoryBadge category={ticket.category} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="ticket-category-select" className="sr-only">
+                    Change Category
+                  </label>
+                  <select
+                    id="ticket-category-select"
+                    aria-label="Change ticket category"
+                    value={ticket.category || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateTicketMutation({
+                        category: val === "" ? null : (val as TicketCategory),
+                      });
+                    }}
+                    disabled={isUpdating}
+                    className="w-full h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="category-select"
+                  >
+                    <option value="">Uncategorized</option>
+                    <option value="GENERAL_QUESTION">General Question</option>
+                    <option value="TECHNICAL_QUESTION">Technical Question</option>
+                    <option value="REFUND_REQUEST">Refund Request</option>
+                  </select>
+                  {isUpdating && updateVariables?.category !== undefined && (
+                    <RefreshCw
+                      className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0"
+                      data-testid="category-updating-spinner"
+                    />
+                  )}
+                </div>
+                {updateError && (
+                  <p
+                    className="text-[11px] text-destructive font-medium"
+                    data-testid="ticket-update-error"
+                  >
+                    Failed to update ticket.
+                  </p>
+                )}
               </div>
 
               <div className="pt-2 border-t border-border/60 space-y-2">

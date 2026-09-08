@@ -5,6 +5,7 @@ import type {
   TicketCounts,
   PaginatedTicketsResult,
 } from "./ticket.types";
+import type { UpdateTicketInput } from "./ticket.schema";
 
 export class TicketServiceError extends Error {
   statusCode: number;
@@ -189,6 +190,52 @@ export class TicketService {
         role: true,
       },
       orderBy: [{ name: "asc" }],
+    });
+  }
+
+  /**
+   * Partially updates a ticket's fields (status, category, priority, assignedToId).
+   * Validates ticket existence and ensures assigned users exist and are active.
+   */
+  async updateTicket(ticketId: number, input: UpdateTicketInput): Promise<Ticket> {
+    const existingTicket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!existingTicket) {
+      throw new TicketServiceError("Ticket not found", 404);
+    }
+
+    if (input.assignedToId !== undefined && input.assignedToId !== null) {
+      const user = await prisma.user.findUnique({
+        where: { id: input.assignedToId },
+        select: { id: true, deletedAt: true, role: true },
+      });
+
+      if (!user || user.deletedAt) {
+        throw new TicketServiceError("Assigned user not found or deactivated", 400);
+      }
+    }
+
+    const dataToUpdate: Prisma.TicketUncheckedUpdateInput = {};
+    if (input.status !== undefined) dataToUpdate.status = input.status;
+    if (input.category !== undefined) dataToUpdate.category = input.category;
+    if (input.priority !== undefined) dataToUpdate.priority = input.priority;
+    if (input.assignedToId !== undefined) dataToUpdate.assignedToId = input.assignedToId;
+
+    return prisma.ticket.update({
+      where: { id: ticketId },
+      data: dataToUpdate,
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
     });
   }
 }

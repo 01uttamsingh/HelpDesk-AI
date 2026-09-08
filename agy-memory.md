@@ -799,6 +799,33 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 26: Edit Ticket Status & Category (Full-Stack Mutation & UI)
+- **Backend Architecture (`Route -> Controller -> Service -> Prisma`)**:
+  - `ticket.schema.ts`: Added `updateTicketSchema` and `UpdateTicketInput` supporting partial updates to `status`, `category` (normalized via `ticketCategorySchema`), `priority`, and `assignedToId`. Enforces at least one field must be provided in the update payload.
+  - `ticket.service.ts`:
+    - Added `updateTicket(ticketId: number, input: UpdateTicketInput)`: verifies ticket exists (throws 404), verifies assigned user is active if `assignedToId` is provided (throws 400), dynamically updates fields via `Prisma.TicketUncheckedUpdateInput`, and returns the updated ticket record with `assignedTo` relation.
+  - `ticket.controller.ts`: Added `updateTicket` controller method with input validation and error formatting.
+  - `ticket.routes.ts`: Mounted `PATCH /api/tickets/:id` under `requireAuth`.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - `api/tickets.api.ts`: Added `UpdateTicketInput`, `UpdateTicketResponse`, and `updateTicket(id, data)` API client function.
+  - `hooks/useUpdateTicket.ts`: Implemented `useUpdateTicket(ticketId)` mutation hook that immediately updates the specific ticket in TanStack Query cache (`["tickets", ticketId]`) and invalidates list/stats queries without redundant refetches of the active detail view.
+  - `pages/TicketDetailPage.tsx`:
+    - Added interactive Status dropdown (`data-testid="status-select"`) with options `OPEN`, `RESOLVED`, and `CLOSED`.
+    - Added interactive Category dropdown (`data-testid="category-select"`) with options `GENERAL_QUESTION`, `TECHNICAL_QUESTION`, `REFUND_REQUEST`, and `""` (Uncategorized).
+    - Preserved badge rendering at top of page and inside sidebar cards (`TicketStatusBadge`, `TicketCategoryBadge`).
+    - Added spinners (`data-testid="status-updating-spinner"`, `data-testid="category-updating-spinner"`) during active mutations.
+    - Added inline error alert (`data-testid="ticket-update-error"`) if updates fail.
+  - `index.ts`: Re-exported `useUpdateTicket`.
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test server/src`): **68 / 68 passed** across 4 test files. Tested schema parsing, status transitions (`OPEN` -> `RESOLVED` -> `CLOSED`), category changes (`GENERAL_QUESTION` -> `TECHNICAL_QUESTION` -> `null`), and 404 handling.
+  - Client Vitest Tests (`bun run test:component`): **99 / 99 passed** across 11 test files. Added 6 new unit tests in `TicketDetailPage.test.tsx` verifying status/category select rendering, API mutations, Uncategorized handling, and error states.
+  - Playwright E2E Tests (`bunx playwright test e2e/tickets/ticket-list.spec.ts`): **8 / 8 passed** against `helpdesk_test`. Added E2E test verifying agent ticket status transitions and category re-classifications in real-time.
+  - Production Builds:
+    - Server: `tsc` type-check completed with 0 errors.
+    - Client: `tsc -b && vite build` built with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -840,7 +867,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   └── tickets/         # Tickets feature module
 │   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById)
 │   │   │       ├── components/  # TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
-│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket
+│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket, useUpdateTicket
 │   │   │       ├── pages/       # TicketsPage.tsx, TicketDetailPage.tsx
 │   │   │       ├── types/       # TicketItem, TicketFilters, PaginationMeta, etc.
 │   │   │       ├── utils/       # date.ts (formatDate helper)

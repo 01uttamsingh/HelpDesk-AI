@@ -90,3 +90,33 @@ export const assignTicketSchema = z.object({
 
 export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
 
+export const updateTicketSchema = z
+  .object({
+    status: z.nativeEnum(TicketStatus).optional(),
+    category: ticketCategorySchema,
+    priority: z.nativeEnum(TicketPriority).optional(),
+    assignedToId: z
+      .union([z.string(), z.null()])
+      .optional()
+      .transform((val) =>
+        val === undefined
+          ? undefined
+          : !val || val.trim() === ""
+          ? null
+          : val.trim()
+      ),
+  })
+  .refine(
+    (data) =>
+      data.status !== undefined ||
+      data.category !== undefined ||
+      data.priority !== undefined ||
+      data.assignedToId !== undefined,
+    {
+      message: "At least one field to update must be provided",
+    }
+  );
+
+export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
+
+

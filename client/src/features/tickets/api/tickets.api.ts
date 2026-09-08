@@ -5,6 +5,9 @@ import type {
   TicketCounts,
   PaginationMeta,
   TicketAssignedUser,
+  TicketStatus,
+  TicketCategory,
+  TicketPriority,
 } from "../types";
 
 export interface GetTicketsResponse {
@@ -103,4 +106,25 @@ export async function getAssignableUsers(): Promise<TicketAssignedUser[]> {
     return [];
   }
 }
+
+export interface UpdateTicketInput {
+  status?: TicketStatus;
+  category?: TicketCategory | null;
+  priority?: TicketPriority;
+  assignedToId?: string | null;
+}
+
+export interface UpdateTicketResponse {
+  success: boolean;
+  data: TicketItem;
+}
+
+export async function updateTicket(
+  id: number,
+  data: UpdateTicketInput
+): Promise<TicketItem> {
+  const res = await api.patch<UpdateTicketResponse>(`/api/tickets/${id}`, data);
+  return res.data.data;
+}
+
 

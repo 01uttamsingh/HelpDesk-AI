@@ -457,4 +457,78 @@ describe("ticketService.getAssignableUsers", () => {
   });
 });
 
+describe("ticketService.updateTicket", () => {
+  it("updates status from OPEN to RESOLVED and then to CLOSED", async () => {
+    const timestamp = Date.now();
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Status Update Test ${timestamp}`,
+      text: "Testing status change",
+    });
+    expect(ticket.status).toBe(TicketStatus.OPEN);
+
+    const resolvedTicket = await ticketService.updateTicket(ticket.id, {
+      status: TicketStatus.RESOLVED,
+    });
+    expect(resolvedTicket.status).toBe(TicketStatus.RESOLVED);
+
+    const closedTicket = await ticketService.updateTicket(ticket.id, {
+      status: TicketStatus.CLOSED,
+    });
+    expect(closedTicket.status).toBe(TicketStatus.CLOSED);
+  });
+
+  it("updates category from GENERAL_QUESTION to TECHNICAL_QUESTION and to null (uncategorized)", async () => {
+    const timestamp = Date.now();
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Category Update Test ${timestamp}`,
+      text: "Testing category change",
+      category: TicketCategory.GENERAL_QUESTION,
+    });
+    expect(ticket.category).toBe(TicketCategory.GENERAL_QUESTION);
+
+    const updatedTech = await ticketService.updateTicket(ticket.id, {
+      category: TicketCategory.TECHNICAL_QUESTION,
+    });
+    expect(updatedTech.category).toBe(TicketCategory.TECHNICAL_QUESTION);
+
+    const uncatTicket = await ticketService.updateTicket(ticket.id, {
+      category: null,
+    });
+    expect(uncatTicket.category).toBeNull();
+  });
+
+  it("updates multiple fields including status and category together", async () => {
+    const timestamp = Date.now();
+    const ticket = await ticketIngestService.ingestInboundEmail({
+      from: `student.${timestamp}@example.com`,
+      subject: `Multi Update Test ${timestamp}`,
+      text: "Multi update testing",
+    });
+
+    const updated = await ticketService.updateTicket(ticket.id, {
+      status: TicketStatus.RESOLVED,
+      category: TicketCategory.REFUND_REQUEST,
+      priority: TicketPriority.HIGH,
+    });
+
+    expect(updated.status).toBe(TicketStatus.RESOLVED);
+    expect(updated.category).toBe(TicketCategory.REFUND_REQUEST);
+    expect(updated.priority).toBe(TicketPriority.HIGH);
+  });
+
+  it("throws 404 TicketServiceError when ticket does not exist", async () => {
+    try {
+      await ticketService.updateTicket(999999999, { status: TicketStatus.RESOLVED });
+      expect(true).toBe(false);
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(404);
+      expect(err.message).toBe("Ticket not found");
+    }
+  });
+});
+
+
 

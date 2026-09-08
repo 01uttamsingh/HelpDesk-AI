@@ -12,5 +12,7 @@ ticketRoutes.post("/inbound", (req, res) => ticketController.handleInboundEmail(
 ticketRoutes.get("/", requireAuth, (req, res) => ticketController.getTickets(req, res));
 ticketRoutes.get("/assignees", requireAuth, (req, res) => ticketController.getAssignees(req, res));
 ticketRoutes.get("/:id", requireAuth, (req, res) => ticketController.getTicketById(req, res));
+ticketRoutes.patch("/:id", requireAuth, (req, res) => ticketController.updateTicket(req, res));
 ticketRoutes.patch("/:id/assign", requireAuth, (req, res) => ticketController.assignTicket(req, res));
+
 
