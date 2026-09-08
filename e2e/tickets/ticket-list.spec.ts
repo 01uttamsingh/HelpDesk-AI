@@ -116,6 +116,10 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
     await page.goto("/tickets");
     await expect(page.getByRole("heading", { name: /^tickets$/i })).toBeVisible();
 
+    // Scope by unique timestamp in search input so sorting behavior is tested cleanly with pagination
+    const searchInput = page.getByTestId("tickets-search-input");
+    await searchInput.fill(timestamp.toString());
+
     const rowNewer = page.getByTestId(`ticket-row-${ticket2.id}`);
     const rowOlder = page.getByTestId(`ticket-row-${ticket1.id}`);
     await expect(rowNewer).toBeVisible();
@@ -142,6 +146,50 @@ test.describe("Ticket List (Happy Path & Routing)", () => {
       const updatedIndexOlder = updatedTexts.findIndex((t) => t.includes(oldSubject));
       expect(updatedIndexOlder).toBeLessThan(updatedIndexNewer);
     }).toPass();
+
+    await signOutViaUI(page);
+  });
+
+  test("paginates tickets correctly with page size and navigation controls", async ({
+    page,
+  }) => {
+    // 1. Login and go to /tickets
+    await loginViaUI(page, TEST_USERS.agent.email, TEST_USERS.agent.password);
+    await expect(page).toHaveURL("/");
+    await page.goto("/tickets");
+    await expect(page.getByRole("heading", { name: /^tickets$/i })).toBeVisible();
+
+    // 2. Verify pagination summary and controls are visible
+    await expect(page.getByText(/showing \d+ to \d+ of \d+ tickets/i)).toBeVisible();
+    const pageSizeSelect = page.getByTestId("pagination-page-size-select");
+    await expect(pageSizeSelect).toBeVisible();
+    await expect(pageSizeSelect).toHaveValue("10");
+
+    // 3. Verify page indicator is active
+    const currentPageIndicator = page.getByTestId("pagination-current-page");
+    await expect(currentPageIndicator).toContainText("Page 1 of");
+
+    // First and Prev buttons should be disabled on page 1
+    await expect(page.getByTestId("pagination-first")).toBeDisabled();
+    await expect(page.getByTestId("pagination-prev")).toBeDisabled();
+
+    // 4. Click Next button if multiple pages exist
+    const nextBtn = page.getByTestId("pagination-next");
+    const isNextEnabled = await nextBtn.isEnabled();
+    if (isNextEnabled) {
+      await nextBtn.click();
+      await expect(currentPageIndicator).toContainText("Page 2 of");
+      await expect(page.getByTestId("pagination-prev")).toBeEnabled();
+
+      // Click Prev button to return to page 1
+      await page.getByTestId("pagination-prev").click();
+      await expect(currentPageIndicator).toContainText("Page 1 of");
+    }
+
+    // 5. Change page size to 20
+    await pageSizeSelect.selectOption("20");
+    await expect(pageSizeSelect).toHaveValue("20");
+    await expect(currentPageIndicator).toContainText("Page 1 of");
 
     await signOutViaUI(page);
   });

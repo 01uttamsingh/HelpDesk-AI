@@ -694,6 +694,42 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 23: Server-Side Pagination with TanStack Table (Page Size Selector, Navigation & Count Synchronization)
+- **Backend Server-Side Pagination Architecture (`server/src/features/tickets/`)**:
+  - `ticket.types.ts`:
+    - Defined `PaginationMeta` (`page`, `pageSize`, `totalCount`, `totalPages`).
+    - Defined `PaginatedTicketsResult` (`tickets: TicketSummary[]`, `pagination: PaginationMeta`).
+    - Added optional `page?: number` and `pageSize?: number` to `TicketFilterQuery`.
+  - `ticket.schema.ts`:
+    - Added `page: z.coerce.number().int().positive().default(1)` and `pageSize: z.coerce.number().int().positive().max(100).default(10)` to `ticketQuerySchema`.
+  - `ticket.service.ts`:
+    - Updated `getAllTickets` to calculate `skip = (page - 1) * pageSize` and `take = pageSize`.
+    - Executed `prisma.ticket.findMany({ where, skip, take, orderBy })` and `prisma.ticket.count({ where })` concurrently via `Promise.all`.
+    - Calculated `totalPages = Math.max(1, Math.ceil(totalCount / pageSize))` and returned `PaginatedTicketsResult`.
+  - `ticket.controller.ts`:
+    - Executed `getAllTickets(query)` and `getTicketCounts()` in parallel, returning `{ success: true, data: tickets, pagination, counts }`.
+- **Frontend Architecture & UI Integration (`client/src/features/tickets/`)**:
+  - `types/index.ts`: Added `PaginationMeta` interface and updated `TicketFilters` to include optional `page?: number` and `pageSize?: number`.
+  - `api/tickets.api.ts`: Mapped `filters.page` and `filters.pageSize` into URL search parameters; updated return type to `GetTicketsResult = { tickets, pagination, counts }`.
+  - `hooks/useTickets.ts`: Updated to configure `placeholderData: keepPreviousData` from `@tanstack/react-query` to ensure flicker-free page transitions, and exposed `pagination` alongside `tickets` and `counts`.
+  - `components/TicketsTable.tsx`:
+    - Added `manualPagination: true` and `pageCount: pagination?.totalPages ?? -1` to `useReactTable`.
+    - Integrated responsive pagination footer displaying:
+      - Item range info: `Showing {start} to {end} of {totalCount} tickets` (`data-testid="pagination-info"`).
+      - Page size dropdown: `10`, `20`, `50` (`data-testid="pagination-page-size-select"`).
+      - Navigation controls: First (`<<`), Previous (`<`), Current page info (`Page X of Y`), Next (`>`), Last (`>>`).
+  - `pages/TicketsPage.tsx`:
+    - Added `page` (default: 1) and `pageSize` (default: 10) state.
+    - Updated search debounce effect to skip initial mount via `useRef(true)`, preventing premature page resets.
+    - Automatically resets `page` to `1` whenever any filter changes (status, category, priority, debounced search, or page size).
+- **Testing & Verification**:
+  - Server Unit Tests (`bun test src`): **44 / 44 passed** (including new `ticketQuerySchema` pagination defaults/bounds validation and `ticketService.getAllTickets` pagination query tests).
+  - Client Vitest Tests (`bun run test`): **80 / 80 passed** across 10 test suites (including `TicketsTable.test.tsx` pagination footer/controls and `TicketsPage.test.tsx` page navigation & reset tests).
+  - Playwright E2E Tests: Added pagination E2E test in `e2e/tickets/ticket-list.spec.ts` verifying page info, navigation controls, and page size selector (**5 / 5 passed**).
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile cleanly with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text

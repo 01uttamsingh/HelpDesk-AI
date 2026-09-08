@@ -92,10 +92,22 @@ const mockGetTicketsImplementation = (_url: string, config?: any) => {
     result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
+  const page = Number(params?.page) || 1;
+  const pageSize = Number(params?.pageSize) || 10;
+  const totalCount = result.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const paginatedResult = result.slice((page - 1) * pageSize, page * pageSize);
+
   return Promise.resolve({
     data: {
       success: true,
-      data: result,
+      data: paginatedResult,
+      pagination: {
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+      },
       counts: {
         total: mockTickets.length,
         open: mockTickets.filter((t) => t.status === "OPEN").length,
@@ -479,5 +491,37 @@ describe("TicketsPage Component", () => {
     await user.click(refreshBtn);
 
     expect(getSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("handles pagination navigation and resets page on filter change", async () => {
+    const user = userEvent.setup();
+    const getSpy = vi.spyOn(api, "get").mockImplementation(mockGetTicketsImplementation);
+
+    renderWithQuery(<TicketsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("React 19 Setup Issue")).toBeInTheDocument();
+    });
+
+    // Default request sends page: 1, pageSize: 10
+    expect(getSpy).toHaveBeenCalledWith(
+      "/api/tickets",
+      expect.objectContaining({
+        params: expect.objectContaining({ page: "1", pageSize: "10" }),
+      })
+    );
+
+    // Change status tab resets page to 1
+    const openTab = screen.getByTestId("status-filter-open");
+    await user.click(openTab);
+
+    await waitFor(() => {
+      expect(getSpy).toHaveBeenCalledWith(
+        "/api/tickets",
+        expect.objectContaining({
+          params: expect.objectContaining({ status: "OPEN", page: "1" }),
+        })
+      );
+    });
   });
 });

@@ -142,5 +142,19 @@ describe("ticket.schema", () => {
       const parsed = ticketQuerySchema.parse({ category: "UNCATEGORIZED" });
       expect(parsed.category).toBeNull();
     });
+
+    it("parses page and pageSize with defaults and rejects invalid values", () => {
+      const defaultParsed = ticketQuerySchema.parse({});
+      expect(defaultParsed.page).toBe(1);
+      expect(defaultParsed.pageSize).toBe(10);
+
+      const customParsed = ticketQuerySchema.parse({ page: "3", pageSize: "25" });
+      expect(customParsed.page).toBe(3);
+      expect(customParsed.pageSize).toBe(25);
+
+      expect(() => ticketQuerySchema.parse({ page: 0 })).toThrow();
+      expect(() => ticketQuerySchema.parse({ page: -1 })).toThrow();
+      expect(() => ticketQuerySchema.parse({ pageSize: 150 })).toThrow();
+    });
   });
 });

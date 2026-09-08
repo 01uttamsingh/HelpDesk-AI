@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { SortingState } from "@tanstack/react-table";
 import { Ticket, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import type {
 } from "../types";
 
 export function TicketsPage() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -26,10 +28,17 @@ export function TicketsPage() {
     { id: "createdAt", desc: true },
   ]);
 
+  const isInitialMount = useRef(true);
+
   // Debounce search query input to avoid spamming the backend API
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -44,15 +53,38 @@ export function TicketsPage() {
 
   const handleSortFilterChange = (newSort: SortFilter) => {
     setSorting([{ id: "createdAt", desc: newSort === "newest" }]);
+    setPage(1);
   };
 
-  const { tickets, counts, isLoading, isFetching, errorMessage, refetch } = useTickets({
+  const handleStatusFilterChange = (status: StatusFilter) => {
+    setStatusFilter(status);
+    setPage(1);
+  };
+
+  const handleCategoryFilterChange = (category: CategoryFilter) => {
+    setCategoryFilter(category);
+    setPage(1);
+  };
+
+  const handlePriorityFilterChange = (priority: PriorityFilter) => {
+    setPriorityFilter(priority);
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1);
+  };
+
+  const { tickets, pagination, counts, isLoading, isFetching, errorMessage, refetch } = useTickets({
     status: statusFilter,
     category: categoryFilter,
     priority: priorityFilter,
     search: debouncedSearchQuery,
     sortBy,
     sortOrder,
+    page,
+    pageSize,
   });
 
   // Ticket counts across whole dataset (from server, with fallback)
@@ -67,7 +99,8 @@ export function TicketsPage() {
     categoryFilter !== "ALL" ||
     priorityFilter !== "ALL" ||
     sortBy !== "createdAt" ||
-    !sorting[0]?.desc;
+    !sorting[0]?.desc ||
+    page > 1;
 
   const handleClearFilters = () => {
     setSearchQuery("");
@@ -76,6 +109,7 @@ export function TicketsPage() {
     setCategoryFilter("ALL");
     setPriorityFilter("ALL");
     setSorting([{ id: "createdAt", desc: true }]);
+    setPage(1);
   };
 
   return (
@@ -140,11 +174,11 @@ export function TicketsPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
         categoryFilter={categoryFilter}
-        onCategoryFilterChange={setCategoryFilter}
+        onCategoryFilterChange={handleCategoryFilterChange}
         priorityFilter={priorityFilter}
-        onPriorityFilterChange={setPriorityFilter}
+        onPriorityFilterChange={handlePriorityFilterChange}
         sortFilter={sortFilter}
         onSortFilterChange={handleSortFilterChange}
         totalCount={totalCount}
@@ -162,6 +196,9 @@ export function TicketsPage() {
         onClearFilters={handleClearFilters}
         sorting={sorting}
         onSortingChange={setSorting}
+        pagination={pagination}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
       />
     </div>
   );

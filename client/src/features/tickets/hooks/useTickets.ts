@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import axios from "axios";
 import { useMemo } from "react";
 import { getTickets, type GetTicketsResult } from "../api/tickets.api";
@@ -8,6 +8,7 @@ export function useTickets(filters?: TicketFilters) {
   const query = useQuery<GetTicketsResult, Error>({
     queryKey: ["tickets", filters],
     queryFn: () => getTickets(filters),
+    placeholderData: keepPreviousData,
   });
 
   const errorMessage = useMemo(() => {
@@ -28,6 +29,7 @@ export function useTickets(filters?: TicketFilters) {
   return {
     ...query,
     tickets: query.data?.tickets ?? [],
+    pagination: query.data?.pagination,
     counts: query.data?.counts,
     errorMessage,
   };

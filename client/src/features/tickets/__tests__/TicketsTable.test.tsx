@@ -172,4 +172,80 @@ describe("TicketsTable", () => {
 
     expect(handleSortingChange).toHaveBeenCalledTimes(1);
   });
+
+  it("renders pagination controls and triggers page change handlers", async () => {
+    const user = userEvent.setup();
+    const handlePageChange = vi.fn();
+    const handlePageSizeChange = vi.fn();
+
+    const { rerender } = render(
+      <TicketsTable
+        tickets={mockTickets}
+        isLoading={false}
+        searchQuery=""
+        hasActiveFilters={false}
+        onClearFilters={vi.fn()}
+        pagination={{
+          page: 1,
+          pageSize: 10,
+          totalCount: 35,
+          totalPages: 4,
+        }}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+    );
+
+    // Range display
+    expect(screen.getByTestId("pagination-info")).toHaveTextContent("Showing 1 to 10 of 35 tickets");
+    expect(screen.getByTestId("pagination-current-page")).toHaveTextContent("Page 1 of 4");
+
+    // First and Prev buttons disabled on Page 1
+    expect(screen.getByTestId("pagination-first")).toBeDisabled();
+    expect(screen.getByTestId("pagination-prev")).toBeDisabled();
+
+    // Next and Last buttons enabled on Page 1
+    const nextBtn = screen.getByTestId("pagination-next");
+    const lastBtn = screen.getByTestId("pagination-last");
+    expect(nextBtn).toBeEnabled();
+    expect(lastBtn).toBeEnabled();
+
+    // Click Next -> calls onPageChange(2)
+    await user.click(nextBtn);
+    expect(handlePageChange).toHaveBeenCalledWith(2);
+
+    // Click Last -> calls onPageChange(4)
+    await user.click(lastBtn);
+    expect(handlePageChange).toHaveBeenCalledWith(4);
+
+    // Page size dropdown change
+    const pageSizeSelect = screen.getByTestId("pagination-page-size-select");
+    await user.selectOptions(pageSizeSelect, "20");
+    expect(handlePageSizeChange).toHaveBeenCalledWith(20);
+
+    // Re-render on last page (Page 4 of 4)
+    rerender(
+      <TicketsTable
+        tickets={mockTickets}
+        isLoading={false}
+        searchQuery=""
+        hasActiveFilters={false}
+        onClearFilters={vi.fn()}
+        pagination={{
+          page: 4,
+          pageSize: 10,
+          totalCount: 35,
+          totalPages: 4,
+        }}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+    );
+
+    expect(screen.getByTestId("pagination-info")).toHaveTextContent("Showing 31 to 35 of 35 tickets");
+    expect(screen.getByTestId("pagination-next")).toBeDisabled();
+    expect(screen.getByTestId("pagination-last")).toBeDisabled();
+    expect(screen.getByTestId("pagination-prev")).toBeEnabled();
+    expect(screen.getByTestId("pagination-first")).toBeEnabled();
+  });
 });

@@ -16,13 +16,17 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { TicketStatusBadge } from "./TicketStatusBadge";
 import { TicketPriorityBadge } from "./TicketPriorityBadge";
 import { TicketCategoryBadge } from "./TicketCategoryBadge";
-import type { TicketItem } from "../types";
+import type { TicketItem, PaginationMeta } from "../types";
 
 export interface TicketsTableProps {
   tickets: TicketItem[];
@@ -33,6 +37,9 @@ export interface TicketsTableProps {
   onSelectTicket?: (ticket: TicketItem) => void;
   sorting?: SortingState;
   onSortingChange?: OnChangeFn<SortingState>;
+  pagination?: PaginationMeta;
+  onPageChange?: (newPage: number) => void;
+  onPageSizeChange?: (newPageSize: number) => void;
 }
 
 export function formatDate(dateStr: string): string {
@@ -59,6 +66,9 @@ export function TicketsTable({
   onSelectTicket,
   sorting,
   onSortingChange,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
 }: TicketsTableProps) {
   const [internalSorting, setInternalSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
@@ -76,19 +86,14 @@ export function TicketsTable({
           const ticket = row.original;
           return (
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border">
                 <TicketIcon className="h-3.5 w-3.5" />
               </div>
-              <div className="min-w-0 max-w-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-semibold text-muted-foreground">
-                    #{ticket.id}
-                  </span>
-                  <span className="font-semibold text-foreground truncate block">
-                    {ticket.subject || "(No Subject)"}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-md">
+              <div className="space-y-0.5 min-w-0">
+                <span className="font-semibold text-foreground truncate block">
+                  {ticket.subject}
+                </span>
+                <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
                   {ticket.body}
                 </p>
               </div>
@@ -103,16 +108,14 @@ export function TicketsTable({
         cell: ({ row }) => {
           const ticket = row.original;
           return (
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                <span className="font-medium text-foreground text-xs truncate max-w-[160px]">
-                  {ticket.senderName}
-                </span>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <User className="h-3.5 w-3.5 text-muted-foreground/70" />
+                <span>{ticket.senderName}</span>
               </div>
-              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
-                <Mail className="h-3 w-3 shrink-0" />
-                <span className="truncate max-w-[160px]">{ticket.senderEmail}</span>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Mail className="h-3 w-3 text-muted-foreground/60" />
+                <span className="truncate max-w-[180px]">{ticket.senderEmail}</span>
               </div>
             </div>
           );
@@ -159,10 +162,16 @@ export function TicketsTable({
     columns,
     state: {
       sorting: activeSorting,
+      pagination: {
+        pageIndex: (pagination?.page ?? 1) - 1,
+        pageSize: pagination?.pageSize ?? 10,
+      },
     },
+    pageCount: pagination?.totalPages ?? -1,
     onSortingChange: handleSortingChange,
     manualSorting: true,
     manualFiltering: true,
+    manualPagination: true,
     enableSortingRemoval: false,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -323,6 +332,118 @@ export function TicketsTable({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Footer */}
+      {pagination && (
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3.5 border-t border-border bg-card text-xs text-muted-foreground"
+          data-testid="tickets-pagination"
+        >
+          {/* Items Range Info */}
+          <div className="flex items-center gap-1.5" data-testid="pagination-info">
+            {pagination.totalCount === 0 ? (
+              <span>Showing 0 of 0 tickets</span>
+            ) : (
+              <span>
+                Showing{" "}
+                <span className="font-medium text-foreground">
+                  {(pagination.page - 1) * pagination.pageSize + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-medium text-foreground">
+                  {Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}
+                </span>{" "}
+                of{" "}
+                <span className="font-medium text-foreground">
+                  {pagination.totalCount}
+                </span>{" "}
+                tickets
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Page Size Selector */}
+            {onPageSizeChange && (
+              <div className="flex items-center gap-2">
+                <span>Per page:</span>
+                <select
+                  value={pagination.pageSize}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                  className="h-8 rounded-md border border-input bg-card px-2 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                  data-testid="pagination-page-size-select"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() => onPageChange?.(1)}
+                disabled={pagination.page <= 1 || isLoading}
+                title="First Page"
+                data-testid="pagination-first"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+                <span className="sr-only">First Page</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange?.(pagination.page - 1)}
+                disabled={pagination.page <= 1 || isLoading}
+                className="gap-1"
+                data-testid="pagination-prev"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Previous</span>
+              </Button>
+
+              <span
+                className="px-2 font-medium text-foreground text-xs"
+                data-testid="pagination-current-page"
+              >
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange?.(pagination.page + 1)}
+                disabled={pagination.page >= pagination.totalPages || isLoading}
+                className="gap-1"
+                data-testid="pagination-next"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() => onPageChange?.(pagination.totalPages)}
+                disabled={pagination.page >= pagination.totalPages || isLoading}
+                title="Last Page"
+                data-testid="pagination-last"
+              >
+                <ChevronsRight className="h-4 w-4" />
+                <span className="sr-only">Last Page</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

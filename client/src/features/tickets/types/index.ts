@@ -41,6 +41,13 @@ export interface TicketCounts {
   closed: number;
 }
 
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 export type TicketSortField =
   | "createdAt"
   | "priority"
@@ -61,5 +68,7 @@ export interface TicketFilters {
   sort?: SortFilter;
   sortBy?: TicketSortField;
   sortOrder?: TicketSortOrder;
+  page?: number;
+  pageSize?: number;
 }
 

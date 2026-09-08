@@ -1,14 +1,16 @@
 import { api } from "@/lib/api";
-import type { TicketItem, TicketFilters, TicketCounts } from "../types";
+import type { TicketItem, TicketFilters, TicketCounts, PaginationMeta } from "../types";
 
 export interface GetTicketsResponse {
   success: boolean;
   data: TicketItem[];
+  pagination?: PaginationMeta;
   counts?: TicketCounts;
 }
 
 export interface GetTicketsResult {
   tickets: TicketItem[];
+  pagination?: PaginationMeta;
   counts?: TicketCounts;
 }
 
@@ -46,9 +48,18 @@ export async function getTickets(filters?: TicketFilters): Promise<GetTicketsRes
     params.sort = filters.sort;
   }
 
+  if (filters?.page) {
+    params.page = String(filters.page);
+  }
+
+  if (filters?.pageSize) {
+    params.pageSize = String(filters.pageSize);
+  }
+
   const res = await api.get<GetTicketsResponse>("/api/tickets", { params });
   return {
     tickets: res.data.data,
+    pagination: res.data.pagination,
     counts: res.data.counts,
   };
 }

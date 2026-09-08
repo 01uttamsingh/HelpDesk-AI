@@ -75,6 +75,8 @@ export const ticketQuerySchema = z.object({
   sort: z.enum(["newest", "oldest"]).optional(),
   sortBy: ticketSortFieldSchema.optional(),
   sortOrder: ticketSortOrderSchema.optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).optional().default(10),
 });
 
 export type TicketQueryInput = z.infer<typeof ticketQuerySchema>;

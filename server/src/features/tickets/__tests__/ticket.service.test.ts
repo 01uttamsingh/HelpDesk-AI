@@ -22,7 +22,7 @@ describe("ticketService.getAllTickets", () => {
       text: "Newest body",
     });
 
-    const tickets = await ticketService.getAllTickets();
+    const { tickets } = await ticketService.getAllTickets();
     expect(tickets.length).toBeGreaterThanOrEqual(2);
 
     const index1 = tickets.findIndex((t) => t.id === t1.id);
@@ -47,7 +47,7 @@ describe("ticketService.getAllTickets", () => {
       category: TicketCategory.REFUND_REQUEST,
     });
 
-    const techTickets = await ticketService.getAllTickets({
+    const { tickets: techTickets } = await ticketService.getAllTickets({
       category: TicketCategory.TECHNICAL_QUESTION,
     });
 
@@ -67,7 +67,7 @@ describe("ticketService.getAllTickets", () => {
       text: "Need more details",
     });
 
-    const results = await ticketService.getAllTickets({
+    const { tickets: results } = await ticketService.getAllTickets({
       search: uniqueTerm,
     });
 
@@ -91,7 +91,8 @@ describe("ticketService.getAllTickets", () => {
       text: "Second created",
     });
 
-    const tickets = await ticketService.getAllTickets({
+    const { tickets } = await ticketService.getAllTickets({
+      search: timestamp.toString(),
       sortBy: "createdAt",
       sortOrder: "asc",
     });
@@ -125,7 +126,8 @@ describe("ticketService.getAllTickets", () => {
     });
 
     // Ascending: LOW < MEDIUM < HIGH
-    const ascTickets = await ticketService.getAllTickets({
+    const { tickets: ascTickets } = await ticketService.getAllTickets({
+      search: timestamp.toString(),
       sortBy: "priority",
       sortOrder: "asc",
     });
@@ -134,7 +136,8 @@ describe("ticketService.getAllTickets", () => {
     expect(lowIndexAsc).toBeLessThan(highIndexAsc);
 
     // Descending: HIGH > MEDIUM > LOW
-    const descTickets = await ticketService.getAllTickets({
+    const { tickets: descTickets } = await ticketService.getAllTickets({
+      search: timestamp.toString(),
       sortBy: "priority",
       sortOrder: "desc",
     });
@@ -163,7 +166,8 @@ describe("ticketService.getAllTickets", () => {
       },
     });
 
-    const ascTickets = await ticketService.getAllTickets({
+    const { tickets: ascTickets } = await ticketService.getAllTickets({
+      search: timestamp.toString(),
       sortBy: "subject",
       sortOrder: "asc",
     });
@@ -184,7 +188,7 @@ describe("ticketService.getAllTickets", () => {
       },
     });
 
-    const highTickets = await ticketService.getAllTickets({
+    const { tickets: highTickets } = await ticketService.getAllTickets({
       priority: TicketPriority.HIGH,
     });
     expect(highTickets.length).toBeGreaterThan(0);
@@ -205,7 +209,7 @@ describe("ticketService.getAllTickets", () => {
       },
     });
 
-    const uncatTickets = await ticketService.getAllTickets({
+    const { tickets: uncatTickets } = await ticketService.getAllTickets({
       category: null,
     });
     expect(uncatTickets.length).toBeGreaterThan(0);
@@ -217,12 +221,33 @@ describe("ticketService.getAllTickets", () => {
   });
 
   it("filters tickets by status", async () => {
-    const openTickets = await ticketService.getAllTickets({
+    const { tickets: openTickets } = await ticketService.getAllTickets({
       status: TicketStatus.OPEN,
     });
     openTickets.forEach((t) => {
       expect(t.status).toBe(TicketStatus.OPEN);
     });
+  });
+
+  it("paginates tickets accurately via page and pageSize", async () => {
+    const page1 = await ticketService.getAllTickets({ page: 1, pageSize: 3 });
+    expect(page1.tickets.length).toBeLessThanOrEqual(3);
+    expect(page1.pagination.page).toBe(1);
+    expect(page1.pagination.pageSize).toBe(3);
+    expect(page1.pagination.totalCount).toBeGreaterThanOrEqual(page1.tickets.length);
+    expect(page1.pagination.totalPages).toBe(Math.ceil(page1.pagination.totalCount / 3));
+
+    if (page1.pagination.totalCount >= 4) {
+      const page2 = await ticketService.getAllTickets({ page: 2, pageSize: 3 });
+      expect(page2.pagination.page).toBe(2);
+      expect(page2.tickets.length).toBeGreaterThan(0);
+
+      // Verify page 1 and page 2 tickets do not overlap
+      const page1Ids = new Set(page1.tickets.map((t) => t.id));
+      page2.tickets.forEach((t) => {
+        expect(page1Ids.has(t.id)).toBe(false);
+      });
+    }
   });
 
   it("calculates accurate ticket counts across statuses via getTicketCounts", async () => {

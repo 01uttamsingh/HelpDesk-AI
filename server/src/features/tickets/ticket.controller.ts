@@ -83,13 +83,14 @@ export class TicketController {
   async getTickets(req: Request, res: Response): Promise<void> {
     try {
       const query = ticketQuerySchema.parse(req.query);
-      const [tickets, counts] = await Promise.all([
+      const [{ tickets, pagination }, counts] = await Promise.all([
         ticketService.getAllTickets(query),
         ticketService.getTicketCounts(),
       ]);
       res.status(200).json({
         success: true,
         data: tickets,
+        pagination,
         counts,
       });
     } catch (error: unknown) {

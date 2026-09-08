@@ -1,6 +1,10 @@
 import prisma from "../../prisma";
 import type { Ticket, Prisma } from "@prisma/client";
-import type { TicketFilterQuery, TicketCounts } from "./ticket.types";
+import type {
+  TicketFilterQuery,
+  TicketCounts,
+  PaginatedTicketsResult,
+} from "./ticket.types";
 
 export class TicketService {
   /**
@@ -23,10 +27,10 @@ export class TicketService {
   }
 
   /**
-   * Fetch tickets sorted by newest first (createdAt: "desc") by default,
+   * Fetch paginated tickets sorted by newest first (createdAt: "desc") by default,
    * with optional filtering by status, category, priority, search text, or sort order.
    */
-  async getAllTickets(query?: TicketFilterQuery): Promise<Ticket[]> {
+  async getAllTickets(query?: TicketFilterQuery): Promise<PaginatedTicketsResult> {
     const where: Prisma.TicketWhereInput = {};
 
     if (query?.status) {
@@ -66,20 +70,42 @@ export class TicketService {
       orderBy = [{ createdAt: "desc" }, { id: "desc" }];
     }
 
-    return prisma.ticket.findMany({
-      where,
-      orderBy,
-      include: {
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
+    const page = query?.page ?? 1;
+    const pageSize = query?.pageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
+
+    const [tickets, totalCount] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        orderBy,
+        skip,
+        take,
+        include: {
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
           },
         },
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+    return {
+      tickets,
+      pagination: {
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
       },
-    });
+    };
   }
 
   /**

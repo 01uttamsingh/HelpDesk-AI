@@ -47,6 +47,18 @@ export interface TicketCounts {
   closed: number;
 }
 
+export interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface PaginatedTicketsResult {
+  tickets: Ticket[];
+  pagination: PaginationMeta;
+}
+
 export interface TicketFilterQuery {
   status?: TicketStatus;
   category?: TicketCategory | null;
@@ -55,6 +67,8 @@ export interface TicketFilterQuery {
   sort?: "newest" | "oldest";
   sortBy?: TicketSortField;
   sortOrder?: TicketSortOrder;
+  page?: number;
+  pageSize?: number;
 }
 
 export type { Ticket, TicketStatus, TicketPriority, TicketCategory };
