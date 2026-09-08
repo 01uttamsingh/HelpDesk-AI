@@ -6,8 +6,15 @@ import { z } from "zod";
 if (process.env.NODE_ENV === "test") {
   dotenv.config({ path: path.resolve(process.cwd(), ".env.test"), override: true });
   dotenv.config({ path: path.resolve(process.cwd(), "server/.env.test"), override: true });
+  dotenv.config({ path: path.resolve(import.meta.dirname, "../../.env.test"), override: true });
+  dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env.test"), override: true });
 }
-dotenv.config();
+
+// Load .env files from both project root and server directory
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
+dotenv.config({ path: path.resolve(import.meta.dirname, "../../.env") });
+dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
 const envSchema = z.object({
   PORT: z
@@ -39,6 +46,7 @@ const envSchema = z.object({
     .default("http://localhost:5173"),
   TRUSTED_ORIGINS: z.string().optional(),
   SUPPORT_EMAIL: z.string().email().default("support@helpdesk.local"),
+  OPENAI_API_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

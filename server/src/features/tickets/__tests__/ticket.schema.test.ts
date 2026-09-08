@@ -5,6 +5,7 @@ import {
   ticketQuerySchema,
   assignTicketSchema,
   updateTicketSchema,
+  polishReplySchema,
 } from "../ticket.schema";
 import { TicketCategory, TicketStatus, TicketPriority } from "@prisma/client";
 
@@ -309,6 +310,29 @@ describe("ticket.schema", () => {
 
     it("rejects invalid category", () => {
       expect(() => updateTicketSchema.parse({ category: "INVALID_CAT" })).toThrow();
+    });
+  });
+
+  describe("polishReplySchema", () => {
+    it("accepts valid text field", () => {
+      const parsed = polishReplySchema.parse({ text: "Please try reloading the page." });
+      expect(parsed.text).toBe("Please try reloading the page.");
+    });
+
+    it("accepts valid body field", () => {
+      const parsed = polishReplySchema.parse({ body: "Draft response to user" });
+      expect(parsed.body).toBe("Draft response to user");
+    });
+
+    it("accepts valid draft field", () => {
+      const parsed = polishReplySchema.parse({ draft: "Quick notes" });
+      expect(parsed.draft).toBe("Quick notes");
+    });
+
+    it("rejects payload when text, body, and draft are all empty or whitespace", () => {
+      expect(() => polishReplySchema.parse({})).toThrow();
+      expect(() => polishReplySchema.parse({ text: "   " })).toThrow();
+      expect(() => polishReplySchema.parse({ body: "", draft: "  " })).toThrow();
     });
   });
 });

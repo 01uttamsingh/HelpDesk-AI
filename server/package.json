@@ -16,11 +16,13 @@
     "test:server": "bun run db:test:setup && bun src/index.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.60",
     "@better-auth/core": "1.7.2",
     "@better-auth/prisma-adapter": "1.7.2",
     "@google/genai": "^2.21.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "7.10.0",
+    "ai": "^7.0.93",
     "better-auth": "^1.7.2",
     "better-call": "^1.4.0",
     "cors": "^2.8.5",

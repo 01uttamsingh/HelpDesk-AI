@@ -29,7 +29,7 @@ This living document tracks project context, architectural decisions, tooling ru
 | **Authentication** | **Database Sessions** | **Better Auth** (email/password, database sessions via Prisma adapter backed by PostgreSQL). |
 | **Database** | **PostgreSQL 18** | Local PostgreSQL on port 5433 (`helpdesk` database). |
 | **ORM** | **Prisma ORM (v7+)** | Type-safe queries with driver adapters (`@prisma/adapter-pg`) and declarative migrations (`prisma.config.ts` & `prisma/schema.prisma`). |
-| **AI / LLM** | **Google Gemini API** (`@google/genai`) | Classification, summaries, text embeddings, and autonomous replies. |
+| **AI / LLM** | **Vercel AI SDK (`ai`, `@ai-sdk/openai`) & Google Gemini (`@google/genai`)** | Unified AI SDK for text generation with OpenAI (`gpt-5.6-luna`), reply polishing, conversation summarization, and autonomous replies. |
 | **Component Testing** | **React Testing Library + Vitest** | UI component tests with `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, and `jsdom`. |
 | **E2E Testing** | **Playwright** | End-to-end user journeys against isolated PostgreSQL test database (`helpdesk_test`). |
 | **Email Inbound/Outbound** | **SendGrid / Mailgun** | Inbound via webhooks, outbound via email API with email threading headers. |
@@ -930,6 +930,69 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 32: AI-Powered Reply Polishing with Vercel AI SDK and GPT-5.6 Luna
+- **Feature & Requirements**:
+  - On the Ticket Details page (`/tickets/:id`), added an AI **Polish** button (`data-testid="polish-reply-button"`) placed immediately before the **Send Reply** button in `TicketReplyForm`.
+  - When clicked, improves the agent's draft message using **GPT-5.6 Luna** via the **Vercel AI SDK** (`ai` + `@ai-sdk/openai`).
+  - Replaces the textarea content with the polished reply so the agent can review, tweak, and submit.
+- **Backend Architecture (`server/src/features/tickets/`)**:
+  - Installed `ai` and `@ai-sdk/openai` in Bun workspace.
+  - Added `polishReplySchema` in `ticket.schema.ts` validating non-empty input (`text`, `body`, or `draft`).
+  - Added `polishReply(ticketId, draftReply)` in `ticket.service.ts`:
+    - Context injection: optionally incorporates customer ticket subject and issue description into the prompt.
+    - Guides GPT-5.6 Luna to maintain empathy, professional tone, technical instructions, and key facts while preventing fabricated commitments.
+  - Controller & Routes:
+    - Added `ticketController.polishReply`.
+    - Mounted `POST /api/tickets/:id/polish-reply` and `POST /api/tickets/polish-reply` guarded by `requireAuth`.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - Installed `ai` and `@ai-sdk/react`.
+  - Added `polishTicketReply` in `tickets.api.ts` and `usePolishReply` mutation hook in `hooks/usePolishReply.ts`.
+  - Updated `TicketReplyForm.tsx` to render the Polish button with a `Sparkles` icon, loading spinner (`Polishing...`), disabled states across controls during generation, and error alert rendering.
+- **Testing & Verification**:
+  - Added unit tests in `ticket.schema.test.ts` for `polishReplySchema`.
+  - Added unit tests in `ticket-polish.service.test.ts` for `polishReply` with mocked AI generation and prompt assertions.
+  - Added 4 unit tests in `TicketReplyForm.test.tsx` verifying button placement, validation error on empty message, successful text replacement, and error banner display.
+
+---
+
+### Milestone 33: Multi-Path Environment Variable Resolution Fix
+- **Problem Identified**:
+  - When launching the server from the root directory (e.g. `bun dev` or root npm scripts), `dotenv.config()` looked only in `process.cwd()/.env`.
+  - The root `.env` only contained `DATABASE_URL`, while `OPENAI_API_KEY` was stored in `server/.env`.
+  - This caused `@ai-sdk/openai` to fail at runtime with `OpenAI API key is missing`.
+- **Resolution**:
+  - Synchronized the root `.env` and `server/.env` files with the complete set of environment variables (including `OPENAI_API_KEY`).
+  - Enhanced `server/src/config/env.ts` to search and load `.env` from multiple paths (`process.cwd()`, `server/`, and directory-relative via `import.meta.dirname`), guaranteeing variables load consistently regardless of working directory.
+  - Updated `ticket.service.ts` to validate `env.OPENAI_API_KEY` and instantiate the provider via `createOpenAI({ apiKey })` before calling `generateText`.
+
+---
+
+### Milestone 34: Ticket & Conversation History AI Summarization
+- **Feature & Requirements**:
+  - Added the ability to summarize an entire ticket and its complete conversation history.
+  - Added a **Summarize** button with a `Sparkles` icon placed below the message text inside the ticket card (`data-testid="summarize-ticket-button"`).
+  - Re-generates a fresh summary on every click.
+  - Generates concise summaries (2-3 sentences, maximum 60 words) without raw markdown symbols (`##`, `**`, `- `).
+- **Backend Architecture (`server/src/features/tickets/`)**:
+  - Added `summarizeTicket(ticketId)` in `ticket.service.ts`:
+    - Queries ticket and all replies in chronological order, mapping author types (`Customer`, `Agent ${name}`, `AI Assistant`).
+    - Instructs GPT-5.6 Luna to produce an objective, scan-friendly summary answering: 1) What the customer needs, 2) Key interaction/action so far, and 3) Current status or immediate next step.
+    - Added `cleanSummaryText(text)` in `ticket.utils.ts` to strip raw markdown headers (`##`), asterisks (`**`), bullets (`- `), and backticks.
+  - Added `ticketController.summarizeTicket` and mounted `POST /api/tickets/:id/summarize` guarded by `requireAuth`.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - Added `summarizeTicket` in `tickets.api.ts` and `useSummarizeTicket` mutation hook in `hooks/useSummarizeTicket.ts`.
+  - Updated `TicketDetails.tsx` to render the Summarize button with `Sparkles` icon below the message and an AI summary container (`data-testid="ticket-summary-content"`).
+  - Added client-side text sanitization ensuring clean plain text display free of markdown symbols.
+- **Testing & Verification**:
+  - Added unit tests in `ticket.utils.test.ts` for `cleanSummaryText`.
+  - Added unit tests in `ticket-polish.service.test.ts` for `summarizeTicket` with full reply conversation history.
+  - Added unit tests in `TicketDetails.test.tsx` verifying button rendering below the message, API call, summary display, re-generation on subsequent clicks, and error handling.
+  - Server Unit Tests (`bun test`): **141 / 141 passed** across 10 files.
+  - Client Unit Tests (`bun run test:unit`): **141 / 141 passed** across 18 files.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -969,9 +1032,9 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── __tests__/   # 7 unit/integration test suites
 │   │   │   │   └── index.ts     # Users barrel export
 │   │   │   └── tickets/         # Tickets feature module
-│   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById)
+│   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById, updateTicket, assignTicket, createReply, polishTicketReply, summarizeTicket)
 │   │   │       ├── components/  # TicketDetails, UpdateTicket, TicketDetailSkeleton, BackToTicketsButton, TicketRepliesThread, TicketReplyForm, TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
-│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket, useUpdateTicket, useCreateReply
+│   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket, useUpdateTicket, useCreateReply, usePolishReply, useSummarizeTicket
 │   │   │       ├── pages/       # TicketsPage.tsx, TicketDetailPage.tsx
 │   │   │       ├── types/       # TicketItem, TicketFilters, PaginationMeta, etc.
 │   │   │       ├── utils/       # date.ts (formatDate helper)
@@ -1005,7 +1068,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── features/            # Feature-based domain modules
 │   │   │   ├── auth/            # Auth feature: auth.ts, auth.middleware.ts
 │   │   │   ├── users/           # Users feature: routes, controller, service, schema, types
-│   │   │   └── tickets/         # Tickets feature: routes, controller, services, schema, types, utils
+│   │   │   └── tickets/         # Tickets feature: routes, controller, services (CRUD, AI polish/summarize, ingest), schema, types, utils, __tests__
 │   │   ├── middleware/          # Backward-compatibility auth.middleware.ts
 │   │   ├── routes/              # Backward-compatibility admin.routes.ts & user.routes.ts
 │   │   ├── controllers/         # Backward-compatibility user.controller.ts
@@ -1062,5 +1125,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 ## 8. Next Steps
 
 According to `implementation-plan.md`:
-* **Phase 3**: Ticket Management & Ingestion (Prisma schema relations, CRUD endpoints, email webhook ingest).
+* **Phase 3.3 & Phase 4.3**: Knowledge Base (KB) Management (Prisma models, CRUD API, and RAG retrieval matching user queries against KB articles).
+* **Phase 4.2 & Phase 5.4**: Autonomous Classification & Response Pipeline (categorizing incoming tickets into General/Technical/Refund, generating grounded auto-replies, and routing sensitive cases to human review).
+* **Phase 5**: Inbound & Outbound Email Loop (SendGrid / Mailgun webhook receiver, email thread matching, and automated email dispatch).
 

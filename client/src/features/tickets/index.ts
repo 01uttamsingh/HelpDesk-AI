@@ -5,6 +5,8 @@ export * from "./hooks/useTicket";
 export * from "./hooks/useAssignTicket";
 export * from "./hooks/useUpdateTicket";
 export * from "./hooks/useCreateReply";
+export * from "./hooks/usePolishReply";
+export * from "./hooks/useSummarizeTicket";
 export * from "./components/TicketStatusBadge";
 export * from "./components/TicketPriorityBadge";
 export * from "./components/TicketCategoryBadge";

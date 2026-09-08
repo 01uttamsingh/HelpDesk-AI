@@ -68,3 +68,28 @@ export function normalizeSubject(subject?: string | null): string {
     .toLowerCase();
 }
 
+/**
+ * Strips raw markdown symbols (headers, bold/italic asterisks, bullets, blockquotes)
+ * from an AI summary so it displays as clean, readable plain text.
+ */
+export function cleanSummaryText(text: string): string {
+  if (!text) return "";
+  return text
+    // Strip markdown headers (e.g. ## Header -> Header)
+    .replace(/^#+\s+/gm, "")
+    // Strip bold and italic delimiters (**bold**, *italic*, __bold__, _italic_)
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    // Strip list bullets at start of lines (e.g. "- Item" -> "Item", "* Item" -> "Item")
+    .replace(/^[-*•+]\s+/gm, "")
+    // Strip blockquotes
+    .replace(/^>\s+/gm, "")
+    // Strip inline code backticks
+    .replace(/`([^`]+)`/g, "$1")
+    // Normalize consecutive newlines
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+

@@ -1,5 +1,9 @@
 import prisma from "../../prisma";
 import { TicketStatus, ReplySenderType, type Ticket, type Prisma } from "@prisma/client";
+import { generateText } from "ai";
+import { createOpenAI, openai } from "@ai-sdk/openai";
+import { env } from "../../config/env";
+import { cleanSummaryText } from "./ticket.utils";
 import type {
   TicketFilterQuery,
   TicketCounts,
@@ -377,6 +381,157 @@ export class TicketService {
         },
       },
     });
+  }
+
+  /**
+   * Polish and improve an agent's draft reply using GPT-5.6 Luna via the Vercel AI SDK.
+   */
+  async polishReply(ticketId: number | null, draftReply: string): Promise<string> {
+    const trimmedDraft = draftReply?.trim();
+    if (!trimmedDraft) {
+      throw new TicketServiceError("Draft reply text is required", 400);
+    }
+
+    const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new TicketServiceError(
+        "OpenAI API key is missing. Please ensure OPENAI_API_KEY is configured in your .env file.",
+        400
+      );
+    }
+
+    let ticketContext = "";
+    if (ticketId !== null) {
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { subject: true, body: true },
+      });
+      if (ticket) {
+        ticketContext = `Customer Ticket Subject: ${ticket.subject}\nCustomer Issue Description: ${ticket.body}\n\n`;
+      }
+    }
+
+    const systemPrompt = `You are an expert customer support specialist.
+Your task is to polish, refine, and improve the agent's draft reply to a customer.
+Follow these guidelines:
+1. Professional & Empathetic Tone: Ensure the reply is polite, professional, supportive, and clear.
+2. Clarity & Flow: Fix any grammatical errors, improve phrasing, and ensure smooth readability.
+3. Preserve Intent: Keep all factual information, steps, technical instructions, decisions, and links from the agent's draft. Do NOT invent new commitments or promises.
+4. Output Format: Return ONLY the polished reply text directly. Do not include introductory notes, commentary, quotation marks, or markdown wrappers.`;
+
+    const prompt = `${ticketContext}Agent's Draft Reply:\n${trimmedDraft}`;
+
+    try {
+      const openaiProvider = createOpenAI({ apiKey });
+      const { text } = await generateText({
+        model: openaiProvider("gpt-5.6-luna"),
+        system: systemPrompt,
+        prompt,
+      });
+
+      return text.trim();
+    } catch (error: any) {
+      console.error("AI SDK error while polishing reply:", error);
+      throw new TicketServiceError(
+        error?.message ? `AI Polish failed: ${error.message}` : "Failed to polish reply with AI",
+        502
+      );
+    }
+  }
+
+  /**
+   * Summarize a ticket and its entire conversation history using GPT-5.6 Luna via Vercel AI SDK.
+   */
+  async summarizeTicket(ticketId: number): Promise<string> {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: {
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!ticket) {
+      throw new TicketServiceError("Ticket not found", 404);
+    }
+
+    const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new TicketServiceError(
+        "OpenAI API key is missing. Please ensure OPENAI_API_KEY is configured in your .env file.",
+        400
+      );
+    }
+
+    let conversationText = "";
+    if (ticket.replies && ticket.replies.length > 0) {
+      conversationText = ticket.replies
+        .map((reply, index) => {
+          const author =
+            reply.senderType === "CUSTOMER"
+              ? `Customer (${ticket.senderName})`
+              : reply.senderType === "AI"
+              ? "AI Assistant"
+              : `Agent (${reply.user?.name || "Support Agent"})`;
+          return `[Reply #${index + 1} by ${author} at ${reply.createdAt.toISOString()}]:\n${reply.body}`;
+        })
+        .join("\n\n");
+    } else {
+      conversationText = "(No replies in conversation yet.)";
+    }
+
+    const systemPrompt = `You are an expert customer support specialist.
+Your task is to provide a brief, concise summary of the support ticket and its conversation history in 2 to 3 sentences (maximum 60 words total).
+
+Instructions:
+- Directly summarize: 1) What the customer needs, 2) The key response or progress so far, and 3) Current status or next step.
+- Keep it concise, direct, and easy to scan in 10 seconds.
+- Do NOT use markdown headers (no '#', '##', '###').
+- Do NOT use bolding or asterisks (no '**' or '*').
+- Do NOT use bullet points or lists (no '-' or '•').
+- Return plain text only without introductory words like "Here is a summary:".`;
+
+    const prompt = `Ticket Details:
+- Ticket ID: #${ticket.id}
+- Subject: ${ticket.subject}
+- Customer: ${ticket.senderName} (${ticket.senderEmail})
+- Priority: ${ticket.priority}
+- Status: ${ticket.status}
+
+Initial Customer Message:
+${ticket.body}
+
+Conversation History (${ticket.replies.length} replies):
+${conversationText}
+
+Provide a concise 2-3 sentence summary in plain text.`;
+
+    try {
+      const openaiProvider = createOpenAI({ apiKey });
+      const { text } = await generateText({
+        model: openaiProvider("gpt-5.6-luna"),
+        system: systemPrompt,
+        prompt,
+      });
+
+      return cleanSummaryText(text.trim());
+    } catch (error: any) {
+      console.error("AI SDK error while summarizing ticket:", error);
+      throw new TicketServiceError(
+        error?.message ? `AI Summary failed: ${error.message}` : "Failed to summarize ticket with AI",
+        502
+      );
+    }
   }
 }
 

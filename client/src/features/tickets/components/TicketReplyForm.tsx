@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Send, RefreshCw, AlertCircle, Lock } from "lucide-react";
+import { Send, RefreshCw, AlertCircle, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateReply } from "../hooks/useCreateReply";
+import { usePolishReply } from "../hooks/usePolishReply";
 import type { TicketStatus } from "../types";
 import { getErrorMessage } from "@/features/users/utils/error";
 
@@ -22,6 +23,11 @@ export function TicketReplyForm({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const { mutate: sendReply, isPending, error } = useCreateReply(ticketId);
+  const {
+    mutate: polishReply,
+    isPending: isPolishing,
+    error: polishError,
+  } = usePolishReply(ticketId);
 
   if (currentStatus === "CLOSED") {
     return (
@@ -40,6 +46,25 @@ export function TicketReplyForm({
       </Card>
     );
   }
+
+  const handlePolish = () => {
+    const trimmedBody = body.trim();
+    if (!trimmedBody) {
+      setValidationError("Reply message cannot be empty.");
+      return;
+    }
+
+    setValidationError(null);
+
+    polishReply(
+      { text: trimmedBody },
+      {
+        onSuccess: (data) => {
+          setBody(data.polishedText);
+        },
+      }
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +91,11 @@ export function TicketReplyForm({
     );
   };
 
-  const apiErrorMessage = error ? getErrorMessage(error, "Failed to send reply.") : null;
+  const apiErrorMessage = error
+    ? getErrorMessage(error, "Failed to send reply.")
+    : polishError
+    ? getErrorMessage(polishError, "Failed to polish reply.")
+    : null;
 
   return (
     <Card data-testid="ticket-reply-form-card" className="border-border">
@@ -105,7 +134,7 @@ export function TicketReplyForm({
                 setBody(e.target.value);
                 if (validationError) setValidationError(null);
               }}
-              disabled={isPending}
+              disabled={isPending || isPolishing}
               aria-invalid={!!validationError}
             />
             {validationError && (
@@ -132,7 +161,7 @@ export function TicketReplyForm({
                 aria-label="Change ticket status on reply"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as TicketStatus | "")}
-                disabled={isPending}
+                disabled={isPending || isPolishing}
                 className="h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50"
               >
                 <option value="">Keep current ({currentStatus})</option>
@@ -142,25 +171,49 @@ export function TicketReplyForm({
               </select>
             </div>
 
-            <Button
-              type="submit"
-              disabled={isPending}
-              size="sm"
-              className="gap-2 shrink-0"
-              data-testid="submit-reply-button"
-            >
-              {isPending ? (
-                <>
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  <span>Sending...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Send Reply</span>
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isPending || isPolishing}
+                onClick={handlePolish}
+                className="gap-1.5 shrink-0"
+                data-testid="polish-reply-button"
+              >
+                {isPolishing ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Polishing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <span>Polish</span>
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="submit"
+                disabled={isPending || isPolishing}
+                size="sm"
+                className="gap-2 shrink-0"
+                data-testid="submit-reply-button"
+              >
+                {isPending ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" />
+                    <span>Send Reply</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>

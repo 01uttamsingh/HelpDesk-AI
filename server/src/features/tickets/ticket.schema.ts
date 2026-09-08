@@ -151,5 +151,25 @@ export const createReplySchema = z.object({
 
 export type CreateReplyInput = z.infer<typeof createReplySchema>;
 
+export const polishReplySchema = z
+  .object({
+    text: z.string().optional(),
+    body: z.string().optional(),
+    draft: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      Boolean(
+        (data.text && data.text.trim().length > 0) ||
+        (data.body && data.body.trim().length > 0) ||
+        (data.draft && data.draft.trim().length > 0)
+      ),
+    {
+      message: "Reply text to polish cannot be empty",
+    }
+  );
+
+export type PolishReplyInput = z.infer<typeof polishReplySchema>;
+
 
 

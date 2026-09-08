@@ -16,6 +16,9 @@ ticketRoutes.patch("/:id", requireAuth, (req, res) => ticketController.updateTic
 ticketRoutes.patch("/:id/assign", requireAuth, (req, res) => ticketController.assignTicket(req, res));
 ticketRoutes.get("/:id/replies", requireAuth, (req, res) => ticketController.getReplies(req, res));
 ticketRoutes.post("/:id/replies", requireAuth, (req, res) => ticketController.createReply(req, res));
+ticketRoutes.post("/polish-reply", requireAuth, (req, res) => ticketController.polishReply(req, res));
+ticketRoutes.post("/:id/polish-reply", requireAuth, (req, res) => ticketController.polishReply(req, res));
+ticketRoutes.post("/:id/summarize", requireAuth, (req, res) => ticketController.summarizeTicket(req, res));
 
 
 

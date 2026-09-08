@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { parseEmailAddress, cleanSubject, deriveNameFromEmail, normalizeSubject } from "../ticket.utils";
+import { parseEmailAddress, cleanSubject, deriveNameFromEmail, normalizeSubject, cleanSummaryText } from "../ticket.utils";
 
 describe("ticket.utils", () => {
   describe("parseEmailAddress", () => {
@@ -99,6 +99,32 @@ describe("ticket.utils", () => {
       expect(normalizeSubject("")).toBe("");
       expect(normalizeSubject(null)).toBe("");
       expect(normalizeSubject(undefined)).toBe("");
+    });
+  });
+
+  describe("cleanSummaryText", () => {
+    it("strips markdown headings, bold markup, and bullet points", () => {
+      const raw = `## Core Issue
+- Customer requests a refund for course reference **1788841914669**.
+- No reason provided.
+
+## Key Discussion & Actions
+- Customer asked for money back.
+- Agent confirmed details.
+
+## Current Status & Next Steps
+- **Status:** Open.`;
+
+      const cleaned = cleanSummaryText(raw);
+      expect(cleaned).not.toContain("##");
+      expect(cleaned).not.toContain("**");
+      expect(cleaned).toContain("Customer requests a refund for course reference 1788841914669.");
+      expect(cleaned).toContain("Status: Open.");
+    });
+
+    it("handles empty or null string gracefully", () => {
+      expect(cleanSummaryText("")).toBe("");
+      expect(cleanSummaryText(null as unknown as string)).toBe("");
     });
   });
 });

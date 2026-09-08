@@ -155,5 +155,35 @@ export async function getTicketReplies(ticketId: number): Promise<TicketReplyIte
   return res.data.data;
 }
 
+export interface PolishReplyResponse {
+  success: boolean;
+  data: {
+    polishedText: string;
+  };
+}
+
+export async function polishTicketReply(
+  text: string,
+  ticketId?: number
+): Promise<{ polishedText: string }> {
+  const endpoint = ticketId
+    ? `/api/tickets/${ticketId}/polish-reply`
+    : `/api/tickets/polish-reply`;
+  const res = await api.post<PolishReplyResponse>(endpoint, { text });
+  return res.data.data;
+}
+
+export interface SummarizeTicketResponse {
+  success: boolean;
+  data: {
+    summary: string;
+  };
+}
+
+export async function summarizeTicket(ticketId: number): Promise<{ summary: string }> {
+  const res = await api.post<SummarizeTicketResponse>(`/api/tickets/${ticketId}/summarize`);
+  return res.data.data;
+}
+
 
 

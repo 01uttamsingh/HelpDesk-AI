@@ -7,6 +7,7 @@ import {
   assignTicketSchema,
   updateTicketSchema,
   createReplySchema,
+  polishReplySchema,
 } from "./ticket.schema";
 import { ticketIngestService } from "./ticket-ingest.service";
 import { ticketService, TicketServiceError } from "./ticket.service";
@@ -352,6 +353,106 @@ export class TicketController {
       res.status(500).json({
         success: false,
         error: "Failed to retrieve ticket replies",
+      });
+    }
+  }
+
+  /**
+   * POST /api/tickets/:id/polish-reply or POST /api/tickets/polish-reply
+   * Polishes an agent's draft reply using GPT-5.6 Luna via Vercel AI SDK.
+   */
+  async polishReply(req: Request, res: Response): Promise<void> {
+    try {
+      let ticketId: number | null = null;
+      if (req.params.id) {
+        const parsedParams = ticketIdParamSchema.safeParse(req.params);
+        if (!parsedParams.success) {
+          res.status(400).json({
+            success: false,
+            error: "Invalid ticket ID. Must be a positive integer.",
+          });
+          return;
+        }
+        ticketId = parsedParams.data.id;
+      }
+
+      const parsedBody = polishReplySchema.safeParse(req.body);
+      if (!parsedBody.success) {
+        res.status(400).json({
+          success: false,
+          error: "Validation error",
+          details: parsedBody.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      const rawText =
+        parsedBody.data.text || parsedBody.data.body || parsedBody.data.draft || "";
+
+      const polishedText = await ticketService.polishReply(ticketId, rawText);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          polishedText,
+        },
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to polish ticket reply:", error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || "Failed to polish reply",
+      });
+    }
+  }
+
+  /**
+   * POST /api/tickets/:id/summarize
+   * Generates a summary of a ticket and its conversation history using GPT-5.6 Luna.
+   */
+  async summarizeTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const summary = await ticketService.summarizeTicket(parsedParams.data.id);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          summary,
+        },
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to summarize ticket:", error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || "Failed to summarize ticket",
       });
     }
   }
