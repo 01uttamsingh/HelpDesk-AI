@@ -1211,6 +1211,36 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
       - Background worker detected topic not covered in KB (`canAutoResolve: false`) -> escalated to `OPEN`.
       - Classified as `TECHNICAL_QUESTION`, priority `MEDIUM`, 0 AI replies created (waiting for human agent review).
 
+### Milestone 7: AI Agent Seeding & Lifecycle, and Role-Aware Helpdesk Dashboard with 30-Day Volume Chart (Completed)
+
+- **AI Agent Seeding & Assignment Lifecycle**:
+  - `server/prisma/seed-ai-agent.ts`: Standalone idempotent script (`bun run prisma:seed:ai`) ensuring the system AI agent (`name: "AI"`, `email: "ai@example.com"`, `role: AGENT`) exists in PostgreSQL.
+  - `server/src/features/tickets/ai-agent.utils.ts`: Provides `getOrCreateAiAgent()`, `AI_AGENT_EMAIL`, and `AI_AGENT_NAME`.
+  - Inbound ticket assignment: `ticket-ingest.service.ts` assigns inbound tickets to the AI agent on arrival (`status: NEW`).
+  - Autonomous resolution assignment preservation & unassignment:
+    - If ticket is resolved autonomously: remains assigned to the AI agent with status `RESOLVED`.
+    - If auto-resolution fails, requires escalation, encounters errors, or customer replies: status moves to `OPEN` and ticket is unassigned (`assignedToId = null`) so human agents can triage and claim it. Preserves existing manual human assignments.
+  - Dedicated unit tests: `server/src/features/tickets/__tests__/ai-agent-assignment.test.ts` (6/6 tests passing).
+- **Backend Dashboard Feature (`server/src/features/dashboard/`)**:
+  - `dashboard.types.ts`: Comprehensive type definitions (`DailyTicketCount`, `AdminDashboardStats`, `RecentAssignedTicketItem`, `AgentDashboardStats`, `DashboardStatsData`).
+  - `dashboard.service.ts`: Implements `formatDuration` (e.g. "1h 15m", "< 1m"), `getDailyTicketCounts(30)` using zero-filled calendar day buckets, and `getDashboardStats(userId, userRole)` with single-pass parallel queries and SQL duration averaging.
+  - `dashboard.controller.ts` & `dashboard.routes.ts`: Exposes `GET /api/dashboard/stats` guarded by `requireAuth`.
+  - Unit tests: `server/src/features/dashboard/__tests__/dashboard.service.test.ts` (12/12 tests passing).
+- **Frontend Dashboard Feature (`client/src/features/dashboard/`)**:
+  - Recharts integration (`recharts` v3.10.1).
+  - `types/index.ts`: Strict client data types (`AdminStatsData`, `AgentStatsData`, `DailyTicketCount`, `RecentAssignedTicketItem`).
+  - `api/dashboard.api.ts` & `hooks/useDashboardStats.ts`: Axios API client and TanStack Query hook with caching and manual refetch.
+  - `components/AdminDashboardStats.tsx`: 5 KPI management cards (Total Tickets, Open Tickets, Resolved by AI, % Resolved by AI, Avg Resolution Time) + secondary status breakdown.
+  - `components/AgentDashboardStats.tsx`: 4 workload cards (Assigned to Me, My Open, My Resolved, My Closed) + team queue overview bar.
+  - `components/TicketVolumeChart.tsx`: Responsive Recharts bar chart rendering 30-day ticket volume with custom tooltip and summary chips (Total in 30 days, Daily average, Peak day).
+  - `components/RecentAssignedTicketsTable.tsx`: Table rendering the 10 most recent assigned tickets with customer info, status/priority/category badges, relative date formatting, direct links, and empty states.
+  - `pages/DashboardPage.tsx`: Dynamic role-aware orchestrator with administrator tab switcher between Overview and My Workload.
+  - `client/src/pages/HomePage.tsx`: Updated to render `<DashboardPage />`.
+- **Testing & Verification**:
+  - Server unit tests (`bun test`): **228 / 228 passed** across 16 test files.
+  - Client component & unit tests (`vitest run`): **168 / 168 passed** across 24 test files (including 5 new suites in `client/src/features/dashboard/__tests__/`).
+  - Production builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile cleanly with zero errors.
+
 ---
 
 ## 7. Current Repository Layout

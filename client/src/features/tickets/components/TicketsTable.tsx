@@ -11,9 +11,6 @@ import {
 import {
   Ticket as TicketIcon,
   Inbox,
-  Calendar,
-  User,
-  Mail,
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
@@ -74,20 +71,20 @@ export function TicketsTable({
         cell: ({ row }) => {
           const ticket = row.original;
           return (
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border">
+            <div className="flex items-start gap-2.5">
+              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <TicketIcon className="h-3.5 w-3.5" />
               </div>
-              <div className="space-y-0.5 min-w-0">
+              <div className="min-w-0 max-w-xs sm:max-w-sm lg:max-w-md">
                 <Link
                   to={`/tickets/${ticket.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-foreground hover:text-primary hover:underline transition-colors truncate block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-xs"
+                  className="font-semibold text-foreground hover:text-primary transition-colors truncate block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-xs"
                   data-testid={`ticket-subject-${ticket.id}`}
                 >
                   {ticket.subject}
                 </Link>
-                <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
+                <p className="text-xs text-muted-foreground line-clamp-1">
                   {ticket.body}
                 </p>
               </div>
@@ -103,29 +100,11 @@ export function TicketsTable({
           const ticket = row.original;
           return (
             <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 font-medium text-foreground">
-                <User className="h-3.5 w-3.5 text-muted-foreground/70" />
-                <span>{ticket.senderName}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Mail className="h-3 w-3 text-muted-foreground/60" />
-                <span className="truncate max-w-[180px]">{ticket.senderEmail}</span>
-              </div>
+              <p className="text-xs font-medium text-foreground">{ticket.senderName || "Unknown"}</p>
+              <p className="text-[11px] text-muted-foreground">{ticket.senderEmail}</p>
             </div>
           );
         },
-        enableSorting: true,
-      },
-      {
-        accessorKey: "category",
-        header: "Category",
-        cell: ({ row }) => <TicketCategoryBadge category={row.original.category} />,
-        enableSorting: true,
-      },
-      {
-        accessorKey: "priority",
-        header: "Priority",
-        cell: ({ row }) => <TicketPriorityBadge priority={row.original.priority} />,
         enableSorting: true,
       },
       {
@@ -135,15 +114,24 @@ export function TicketsTable({
         enableSorting: true,
       },
       {
+        accessorKey: "priority",
+        header: "Priority",
+        cell: ({ row }) => <TicketPriorityBadge priority={row.original.priority} />,
+        enableSorting: true,
+      },
+      {
+        accessorKey: "category",
+        header: "Category",
+        cell: ({ row }) => <TicketCategoryBadge category={row.original.category} />,
+        enableSorting: true,
+      },
+      {
         accessorKey: "createdAt",
         header: "Created",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5 text-muted-foreground/70" />
-            <time dateTime={row.original.createdAt}>
-              {formatDate(row.original.createdAt)}
-            </time>
-          </div>
+          <time dateTime={row.original.createdAt} className="text-xs text-muted-foreground">
+            {formatDate(row.original.createdAt)}
+          </time>
         ),
         enableSorting: true,
       },
@@ -180,7 +168,7 @@ export function TicketsTable({
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm" data-testid="tickets-table">
-          <thead className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <thead className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -188,12 +176,16 @@ export function TicketsTable({
                   const isSorted = header.column.getIsSorted();
 
                   return (
-                    <th key={header.id} scope="col" className="px-6 py-3.5">
+                    <th
+                      key={header.id}
+                      scope="col"
+                      className="py-3 px-4"
+                    >
                       {header.isPlaceholder ? null : canSort ? (
                         <button
                           type="button"
                           onClick={header.column.getToggleSortingHandler()}
-                          className="flex items-center gap-1.5 font-semibold text-xs text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors group cursor-pointer select-none -ml-1 px-1 py-0.5 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          className="flex items-center gap-1.5 font-semibold text-xs text-muted-foreground hover:text-foreground transition-colors group cursor-pointer select-none -ml-1 px-1 py-0.5 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                           data-testid={`sort-header-${header.column.id}`}
                           aria-label={`Sort by ${String(header.column.columnDef.header)}`}
                         >
@@ -237,29 +229,32 @@ export function TicketsTable({
               // Skeleton loading state
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={idx} data-testid="ticket-skeleton-row">
-                  <td className="px-6 py-4">
-                    <div className="space-y-1.5">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-64" />
+                  <td className="py-3 px-4">
+                    <div className="flex items-start gap-2.5">
+                      <Skeleton className="mt-0.5 h-6 w-6 rounded-md shrink-0" />
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-64" />
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1.5">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-3 w-36" />
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="space-y-1">
+                      <Skeleton className="h-3.5 w-24" />
+                      <Skeleton className="h-3 w-32" />
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <Skeleton className="h-5 w-24 rounded-full" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <Skeleton className="h-5 w-16 rounded-md" />
-                  </td>
-                  <td className="px-6 py-4">
+                  <td className="py-3 px-4 whitespace-nowrap">
                     <Skeleton className="h-5 w-20 rounded-full" />
                   </td>
-                  <td className="px-6 py-4">
-                    <Skeleton className="h-4 w-24" />
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <Skeleton className="h-5 w-16 rounded-md" />
+                  </td>
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <Skeleton className="h-5 w-24 rounded-full" />
+                  </td>
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <Skeleton className="h-4 w-20" />
                   </td>
                 </tr>
               ))
@@ -271,26 +266,27 @@ export function TicketsTable({
                   <tr
                     key={ticket.id}
                     onClick={() => onSelectTicket?.(ticket)}
-                    className={`group transition-colors hover:bg-muted/50 ${
+                    className={`hover:bg-muted/30 transition-colors group ${
                       onSelectTicket ? "cursor-pointer" : ""
                     }`}
                     data-testid={`ticket-row-${ticket.id}`}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className={`px-6 py-4 ${
-                          cell.column.id === "createdAt"
-                            ? "text-xs text-muted-foreground whitespace-nowrap"
-                            : ""
-                        }`}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const isSubject = cell.column.id === "subject";
+                      return (
+                        <td
+                          key={cell.id}
+                          className={`py-3 px-4 ${
+                            isSubject ? "" : "whitespace-nowrap"
+                          }`}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               })

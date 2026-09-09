@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LifeBuoy, LogIn, LogOut, User, Loader2 } from "lucide-react";
 import { useSession, signOut } from "@/features/auth";
 
@@ -8,8 +8,13 @@ import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const session = useSession();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const isDashboardActive = location.pathname === "/";
+  const isTicketsActive = location.pathname.startsWith("/tickets");
+  const isUsersActive = location.pathname.startsWith("/users");
 
   const handleSignOut = async () => {
     try {
@@ -44,17 +49,29 @@ export function Navbar() {
           </Link>
 
           {user && (
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center gap-5">
               <Link
                 to="/"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(
+                  "text-sm transition-colors",
+                  isDashboardActive
+                    ? "text-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                )}
+                aria-current={isDashboardActive ? "page" : undefined}
                 data-testid="nav-dashboard-link"
               >
                 Dashboard
               </Link>
               <Link
                 to="/tickets"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(
+                  "text-sm transition-colors",
+                  isTicketsActive
+                    ? "text-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                )}
+                aria-current={isTicketsActive ? "page" : undefined}
                 data-testid="nav-tickets-link"
               >
                 Tickets
@@ -62,7 +79,14 @@ export function Navbar() {
               {user.role?.toUpperCase() === "ADMIN" && (
                 <Link
                   to="/users"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className={cn(
+                    "text-sm transition-colors",
+                    isUsersActive
+                      ? "text-foreground font-bold"
+                      : "text-muted-foreground hover:text-foreground font-medium"
+                  )}
+                  aria-current={isUsersActive ? "page" : undefined}
+                  data-testid="nav-users-link"
                 >
                   Users
                 </Link>

@@ -7,3 +7,4 @@ export * from "./ticket-auto-resolve.service";
 export * from "./ticket.service";
 export * from "./ticket.controller";
 export * from "./ticket.routes";
+export * from "./ai-agent.utils";

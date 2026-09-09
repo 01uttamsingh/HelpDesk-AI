@@ -291,7 +291,7 @@ describe("ticketService.getTicketById", () => {
     expect(ticket?.senderEmail).toBe(`customer.${timestamp}@example.com`);
     expect(ticket?.category).toBe(TicketCategory.TECHNICAL_QUESTION);
     expect(ticket?.body).toBe("Detailed content for single ticket inspection");
-    expect(ticket?.assignedTo).toBeNull();
+    expect(ticket?.assignedTo?.name).toBe("AI");
   });
 
   it("returns null when ticket does not exist", async () => {

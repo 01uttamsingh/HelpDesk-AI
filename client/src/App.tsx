@@ -53,9 +53,10 @@ export function App() {
             </Routes>
           </main>
           <footer className="border-t border-border bg-card py-4 text-center text-xs text-muted-foreground">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-              <span>AI Helpdesk &copy; {new Date().getFullYear()} &bull; Better Auth &amp; PostgreSQL</span>
-              <span className="text-muted-foreground/70">Phase 2: Authentication &amp; User Management</span>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-1.5">
+              <span>AI HelpDesk &copy; {new Date().getFullYear()}</span>
+              <span>&bull;</span>
+              <span>Made with 🖤</span>
             </div>
           </footer>
         </div>

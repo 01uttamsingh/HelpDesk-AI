@@ -8,6 +8,7 @@ import { env, getTrustedOrigins } from "./config/env";
 import adminRoutes from "./routes/admin.routes";
 import { userRoutes } from "./features/users";
 import { webhookRoutes, ticketRoutes } from "./features/tickets";
+import { dashboardRoutes } from "./features/dashboard";
 import { startQueue, stopQueue } from "./queue";
 
 // Prevent Bun event loop idle exit on Windows
@@ -114,6 +115,7 @@ app.use("/api/users", userRoutes);
 // Inbound email webhooks and ticket management endpoints
 app.use("/api/webhooks", webhookRoutes);
 app.use("/api/tickets", ticketRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Centralized error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import type { InboundEmailPayload } from "./ticket.types";
 import { parseEmailAddress, cleanSubject, normalizeSubject } from "./ticket.utils";
+import { getOrCreateAiAgent } from "./ai-agent.utils";
 
 export interface IngestInboundEmailResult extends Ticket {
   reply?: TicketReply;
@@ -46,6 +47,9 @@ export class TicketIngestService {
     });
 
     if (matchingTicket) {
+      const aiAgent = await getOrCreateAiAgent();
+      const newAssignedToId = matchingTicket.assignedToId === aiAgent.id ? null : matchingTicket.assignedToId;
+
       // Append customer reply and ensure ticket is OPEN with updated timestamp
       const [reply, updatedTicket] = await prisma.$transaction([
         prisma.ticketReply.create({
@@ -61,6 +65,7 @@ export class TicketIngestService {
           where: { id: matchingTicket.id },
           data: {
             status: TicketStatus.OPEN,
+            assignedToId: newAssignedToId,
             updatedAt: new Date(),
           },
         }),
@@ -73,7 +78,8 @@ export class TicketIngestService {
       };
     }
 
-    // Otherwise, create a new ticket (starts as NEW)
+    // Otherwise, create a new ticket (starts as NEW, assigned to AI agent)
+    const aiAgent = await getOrCreateAiAgent();
     const ticket = await prisma.ticket.create({
       data: {
         subject,
@@ -85,6 +91,7 @@ export class TicketIngestService {
         priority: TicketPriority.MEDIUM,
         category: payload.category ?? null,
         messageId: payload.messageId?.trim() || null,
+        assignedToId: aiAgent.id,
       },
     });
 

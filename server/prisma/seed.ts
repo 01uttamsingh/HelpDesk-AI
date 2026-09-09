@@ -29,6 +29,12 @@ const usersToSeed = [
     name: "Agent",
     role: Role.AGENT,
   },
+  {
+    email: (process.env.AI_AGENT_EMAIL || "ai@example.com").trim().toLowerCase(),
+    password: process.env.AI_AGENT_PASSWORD || "uvdb1357",
+    name: "AI",
+    role: Role.AGENT,
+  },
 ];
 
 async function seedUser(userData: (typeof usersToSeed)[number]) {

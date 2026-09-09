@@ -11,6 +11,7 @@ import {
   deriveNameFromEmail,
   formatReplyText,
 } from "./ticket.utils";
+import { getOrCreateAiAgent } from "./ai-agent.utils";
 import { z } from "zod";
 
 export const HELPDESK_SUPPORT_TEAM = "HelpDesk Support Team";
@@ -168,18 +169,27 @@ export class TicketAutoResolveService {
       };
     }
 
-    // Move ticket to PROCESSING state while AI is trying to resolve it
+    const aiAgent = await getOrCreateAiAgent();
+
+    // Move ticket to PROCESSING state while AI is trying to resolve it (ensure assigned to AI if unassigned)
     await prisma.ticket.update({
       where: { id: ticketId },
-      data: { status: TicketStatus.PROCESSING },
+      data: {
+        status: TicketStatus.PROCESSING,
+        ...(!ticket.assignedToId ? { assignedToId: aiAgent.id } : {}),
+      },
     });
 
     const apiKey = env.OPENAI_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      // If API key is missing, fallback to OPEN so the ticket is visible to human agents
+      // If API key is missing, fallback to OPEN and unassign from AI so the ticket is visible to human agents
+      const shouldUnassign = !ticket.assignedToId || ticket.assignedToId === aiAgent.id;
       const fallbackTicket = await prisma.ticket.update({
         where: { id: ticketId },
-        data: { status: TicketStatus.OPEN },
+        data: {
+          status: TicketStatus.OPEN,
+          ...(shouldUnassign ? { assignedToId: null } : {}),
+        },
       });
       throw new TicketServiceError(
         "OpenAI API key is missing. Please ensure OPENAI_API_KEY is configured in your .env file.",
@@ -227,7 +237,7 @@ ${ticket.body}`;
           signOffName: HELPDESK_SUPPORT_TEAM,
         });
 
-        // Transition from PROCESSING -> RESOLVED with AI reply
+        // Transition from PROCESSING -> RESOLVED with AI reply and assigned to AI agent
         const [createdReply, updatedTicket] = await prisma.$transaction([
           prisma.ticketReply.create({
             data: {
@@ -241,6 +251,7 @@ ${ticket.body}`;
             where: { id: ticket.id },
             data: {
               status: TicketStatus.RESOLVED,
+              assignedToId: aiAgent.id,
               category: ticket.category ?? output.category,
               priority: output.priority,
               updatedAt: new Date(),
@@ -257,11 +268,13 @@ ${ticket.body}`;
           priority: output.priority,
         };
       } else {
-        // Transition from PROCESSING -> OPEN (ready for human agents)
+        // Transition from PROCESSING -> OPEN (unassign from AI agent so human agents can claim it)
+        const shouldUnassign = !ticket.assignedToId || ticket.assignedToId === aiAgent.id;
         const updatedTicket = await prisma.ticket.update({
           where: { id: ticket.id },
           data: {
             status: TicketStatus.OPEN,
+            ...(shouldUnassign ? { assignedToId: null } : {}),
             category: ticket.category ?? output.category,
             priority: output.priority,
             updatedAt: new Date(),
@@ -277,10 +290,15 @@ ${ticket.body}`;
         };
       }
     } catch (error: any) {
-      // In case of AI error, transition to OPEN so the ticket is never stuck in PROCESSING
+      // In case of AI error, transition to OPEN and unassign from AI so the ticket is never stuck in PROCESSING
+      const aiAgent = await getOrCreateAiAgent().catch(() => null);
+      const shouldUnassign = !ticket.assignedToId || (aiAgent && ticket.assignedToId === aiAgent.id);
       await prisma.ticket.update({
         where: { id: ticketId },
-        data: { status: TicketStatus.OPEN },
+        data: {
+          status: TicketStatus.OPEN,
+          ...(shouldUnassign ? { assignedToId: null } : {}),
+        },
       }).catch(() => null);
 
       if (error instanceof TicketServiceError) throw error;
@@ -302,10 +320,13 @@ ${ticket.body}`;
       return await enqueueTicketAutoResolve(ticketId);
     } catch (error) {
       console.error(`[AI Auto-Resolve] Failed to enqueue auto-resolve job for ticket #${ticketId}:`, error);
-      // Fallback: ensure ticket is marked OPEN so it's visible to agents
+      // Fallback: ensure ticket is marked OPEN and unassigned from AI so it's visible to agents
       prisma.ticket.update({
         where: { id: ticketId },
-        data: { status: TicketStatus.OPEN },
+        data: {
+          status: TicketStatus.OPEN,
+          assignedToId: null,
+        },
       }).catch(() => null);
       return null;
     }
