@@ -82,6 +82,8 @@ model Verification {
 }
 
 enum TicketStatus {
+  NEW
+  PROCESSING
   OPEN
   RESOLVED
   CLOSED
@@ -112,7 +114,7 @@ model Ticket {
   htmlBody     String?         @map("html_body")
   senderName   String          @map("sender_name")
   senderEmail  String          @map("sender_email")
-  status       TicketStatus    @default(OPEN)
+  status       TicketStatus    @default(NEW)
   priority     TicketPriority  @default(MEDIUM)
   category     TicketCategory?
   messageId    String?         @map("message_id")

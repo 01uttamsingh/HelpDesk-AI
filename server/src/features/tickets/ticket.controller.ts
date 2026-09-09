@@ -11,6 +11,7 @@ import {
 } from "./ticket.schema";
 import { ticketIngestService, type IngestInboundEmailResult } from "./ticket-ingest.service";
 import { ticketClassificationService } from "./ticket-classification.service";
+import { ticketAutoResolveService } from "./ticket-auto-resolve.service";
 import { ticketService, TicketServiceError } from "./ticket.service";
 import type { AuthenticatedRequest } from "../auth";
 
@@ -505,6 +506,44 @@ export class TicketController {
       res.status(500).json({
         success: false,
         error: error?.message || "Failed to classify ticket",
+      });
+    }
+  }
+
+  /**
+   * POST /api/tickets/:id/auto-resolve
+   * Manually triggers auto-resolution against the knowledge base for a ticket.
+   */
+  async autoResolveTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const result = await ticketAutoResolveService.autoResolveTicket(parsedParams.data.id);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to auto-resolve ticket:", error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || "Failed to auto-resolve ticket",
       });
     }
   }

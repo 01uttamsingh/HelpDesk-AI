@@ -1,11 +1,17 @@
 import { PgBoss } from "pg-boss";
 import { env } from "./config/env";
 import { ticketClassificationService } from "./features/tickets/ticket-classification.service";
+import { ticketAutoResolveService } from "./features/tickets/ticket-auto-resolve.service";
 import { TicketServiceError } from "./features/tickets/ticket.service";
 
 export const TICKET_CLASSIFICATION_QUEUE = "ticket-classification";
+export const TICKET_AUTO_RESOLVE_QUEUE = "ticket-auto-resolve";
 
 export interface TicketClassificationJobData {
+  ticketId: number;
+}
+
+export interface TicketAutoResolveJobData {
   ticketId: number;
 }
 
@@ -31,6 +37,7 @@ export async function ensureQueueStarted(): Promise<PgBoss> {
   if (!isStarted) {
     await boss.start();
     await boss.createQueue(TICKET_CLASSIFICATION_QUEUE, { notify: true });
+    await boss.createQueue(TICKET_AUTO_RESOLVE_QUEUE, { notify: true });
     isStarted = true;
   }
   return boss;
@@ -62,7 +69,30 @@ export async function startQueue(): Promise<PgBoss> {
     }
   );
 
-  console.log(`[pg-boss] Queue '${TICKET_CLASSIFICATION_QUEUE}' worker registered with LISTEN/NOTIFY`);
+  // Register worker for ticket auto-resolution with low-latency polling fallback
+  await boss.work(
+    TICKET_AUTO_RESOLVE_QUEUE,
+    { batchSize: 1, pollingIntervalSeconds: 1 },
+    async (jobs) => {
+      for (const job of jobs) {
+        const { ticketId } = job.data as TicketAutoResolveJobData;
+        try {
+          console.log(`[pg-boss] Processing auto-resolve job for ticket #${ticketId}`);
+          await ticketAutoResolveService.autoResolveTicket(ticketId);
+          console.log(`[pg-boss] Completed auto-resolve job for ticket #${ticketId}`);
+        } catch (error) {
+          if (error instanceof TicketServiceError && error.statusCode === 404) {
+            console.warn(`[pg-boss] Ticket #${ticketId} no longer exists, skipping auto-resolve job`);
+            continue;
+          }
+          console.error(`[pg-boss] Failed processing auto-resolve job for ticket #${ticketId}:`, error);
+          throw error;
+        }
+      }
+    }
+  );
+
+  console.log(`[pg-boss] Queues registered with LISTEN/NOTIFY`);
   return boss;
 }
 
@@ -98,3 +128,20 @@ export async function enqueueTicketClassification(ticketId: number): Promise<str
   console.log(`[pg-boss] Enqueued classification job for ticket #${ticketId} (job id: ${jobId})`);
   return jobId;
 }
+
+export async function enqueueTicketAutoResolve(ticketId: number): Promise<string | null> {
+  const boss = await ensureQueueStarted();
+  const jobId = await boss.send(
+    TICKET_AUTO_RESOLVE_QUEUE,
+    { ticketId },
+    {
+      retryLimit: 3,
+      retryDelay: 5,
+      retryBackoff: true,
+      expireInSeconds: 60,
+    }
+  );
+  console.log(`[pg-boss] Enqueued auto-resolve job for ticket #${ticketId} (job id: ${jobId})`);
+  return jobId;
+}
+

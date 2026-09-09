@@ -1,4 +1,4 @@
-export type TicketStatus = "OPEN" | "RESOLVED" | "CLOSED";
+export type TicketStatus = "NEW" | "PROCESSING" | "OPEN" | "RESOLVED" | "CLOSED";
 export type TicketPriority = "LOW" | "MEDIUM" | "HIGH";
 export type TicketCategory =
   | "GENERAL_QUESTION"
@@ -51,7 +51,7 @@ export interface TicketItem {
   updatedAt: string;
 }
 
-export type StatusFilter = "ALL" | TicketStatus;
+export type StatusFilter = "ALL" | "OPEN" | "RESOLVED" | "CLOSED";
 export type CategoryFilter = "ALL" | TicketCategory | "UNCATEGORIZED";
 export type PriorityFilter = "ALL" | TicketPriority;
 export type SortFilter = "newest" | "oldest";

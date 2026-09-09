@@ -89,6 +89,8 @@ export function UpdateTicket({
                 className="w-full h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="status-select"
               >
+                {ticket.status === "NEW" && <option value="NEW">New</option>}
+                {ticket.status === "PROCESSING" && <option value="PROCESSING">Processing</option>}
                 <option value="OPEN">Open</option>
                 <option value="RESOLVED">Resolved</option>
                 <option value="CLOSED">Closed</option>

@@ -8,6 +8,7 @@ import {
   ensureAgentSignOff,
   extractFirstName,
   ensureCustomerGreeting,
+  formatReplyText,
 } from "../ticket.utils";
 
 describe("ticket.utils", () => {
@@ -229,6 +230,39 @@ describe("ticket.utils", () => {
     it("replaces placeholder brackets with customer first name", () => {
       const text = "Dear [Customer Name],\n\nWe have updated your records.";
       expect(ensureCustomerGreeting(text, "Alex")).toBe("Dear Alex,\n\nWe have updated your records.");
+    });
+  });
+
+  describe("formatReplyText", () => {
+    it("returns empty string for empty, whitespace, or undefined input", () => {
+      expect(formatReplyText("")).toBe("");
+      expect(formatReplyText("   ")).toBe("");
+    });
+
+    it("formats reply with customer first name greeting, clean spacing, and HelpDesk Support Team sign-off", () => {
+      const rawText = `### Password Reset Steps\n\n1. Go to the login page.\n2. Click Forgot Password.\n\n\n\nBest regards,\n[Agent Name]`;
+      const formatted = formatReplyText(rawText, {
+        customerFirstName: "Emily",
+        signOffName: "HelpDesk Support Team",
+      });
+
+      expect(formatted).toContain("Dear Emily,\n\n");
+      expect(formatted).not.toContain("###");
+      expect(formatted).toContain("Password Reset Steps");
+      expect(formatted).not.toContain("\n\n\n");
+      expect(formatted).toContain("HelpDesk Support Team");
+    });
+
+    it("replaces older team signature with HelpDesk Support Team", () => {
+      const rawText = "We have refunded your order.\n\nBest regards,\nCode with Mosh Support Team";
+      const formatted = formatReplyText(rawText, {
+        customerFirstName: "David",
+        signOffName: "HelpDesk Support Team",
+      });
+
+      expect(formatted).toBe(
+        "Dear David,\n\nWe have refunded your order.\n\nBest regards,\nHelpDesk Support Team"
+      );
     });
   });
 });

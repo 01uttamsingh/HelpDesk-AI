@@ -151,8 +151,14 @@ export function TicketsTable({
     []
   );
 
+  const displayTickets = useMemo(() => {
+    return tickets.filter(
+      (ticket) => ticket.status !== "NEW" && ticket.status !== "PROCESSING"
+    );
+  }, [tickets]);
+
   const table = useReactTable({
-    data: tickets,
+    data: displayTickets,
     columns,
     state: {
       sorting: activeSorting,

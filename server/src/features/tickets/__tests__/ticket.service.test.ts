@@ -12,6 +12,7 @@ describe("ticketService.getAllTickets", () => {
       subject: `Old Ticket ${timestamp}`,
       text: "Oldest body",
     });
+    await prisma.ticket.update({ where: { id: t1.id }, data: { status: TicketStatus.OPEN } });
 
     // Small delay to guarantee different createdAt
     await new Promise((res) => setTimeout(res, 20));
@@ -21,6 +22,7 @@ describe("ticketService.getAllTickets", () => {
       subject: `New Ticket ${timestamp}`,
       text: "Newest body",
     });
+    await prisma.ticket.update({ where: { id: t2.id }, data: { status: TicketStatus.OPEN } });
 
     const { tickets } = await ticketService.getAllTickets();
     expect(tickets.length).toBeGreaterThanOrEqual(2);
@@ -33,19 +35,21 @@ describe("ticketService.getAllTickets", () => {
 
   it("filters tickets by category", async () => {
     const timestamp = Date.now();
-    await ticketIngestService.ingestInboundEmail({
+    const tTech = await ticketIngestService.ingestInboundEmail({
       from: `tech.${timestamp}@example.com`,
       subject: `Technical issue ${timestamp}`,
       text: "App crashes",
       category: TicketCategory.TECHNICAL_QUESTION,
     });
+    await prisma.ticket.update({ where: { id: tTech.id }, data: { status: TicketStatus.OPEN } });
 
-    await ticketIngestService.ingestInboundEmail({
+    const tRefund = await ticketIngestService.ingestInboundEmail({
       from: `refund.${timestamp}@example.com`,
       subject: `Refund please ${timestamp}`,
       text: "Want my money back",
       category: TicketCategory.REFUND_REQUEST,
     });
+    await prisma.ticket.update({ where: { id: tRefund.id }, data: { status: TicketStatus.OPEN } });
 
     const { tickets: techTickets } = await ticketService.getAllTickets({
       category: TicketCategory.TECHNICAL_QUESTION,
@@ -61,11 +65,12 @@ describe("ticketService.getAllTickets", () => {
     const timestamp = Date.now();
     const uniqueTerm = `quantum-physics-${timestamp}`;
 
-    await ticketIngestService.ingestInboundEmail({
+    const t = await ticketIngestService.ingestInboundEmail({
       from: `student.${timestamp}@example.com`,
       subject: `Course on ${uniqueTerm}`,
       text: "Need more details",
     });
+    await prisma.ticket.update({ where: { id: t.id }, data: { status: TicketStatus.OPEN } });
 
     const { tickets: results } = await ticketService.getAllTickets({
       search: uniqueTerm,
@@ -82,6 +87,7 @@ describe("ticketService.getAllTickets", () => {
       subject: `Old Ticket Sort ${timestamp}`,
       text: "First created",
     });
+    await prisma.ticket.update({ where: { id: t1.id }, data: { status: TicketStatus.OPEN } });
 
     await new Promise((res) => setTimeout(res, 25));
 
@@ -90,6 +96,7 @@ describe("ticketService.getAllTickets", () => {
       subject: `New Ticket Sort ${timestamp}`,
       text: "Second created",
     });
+    await prisma.ticket.update({ where: { id: t2.id }, data: { status: TicketStatus.OPEN } });
 
     const { tickets } = await ticketService.getAllTickets({
       search: timestamp.toString(),
@@ -111,6 +118,7 @@ describe("ticketService.getAllTickets", () => {
         body: "Low",
         senderName: "Low User",
         senderEmail: `low.${timestamp}@example.com`,
+        status: TicketStatus.OPEN,
         priority: TicketPriority.LOW,
       },
     });
@@ -121,6 +129,7 @@ describe("ticketService.getAllTickets", () => {
         body: "High",
         senderName: "High User",
         senderEmail: `high.${timestamp}@example.com`,
+        status: TicketStatus.OPEN,
         priority: TicketPriority.HIGH,
       },
     });
@@ -154,6 +163,7 @@ describe("ticketService.getAllTickets", () => {
         body: "Body A",
         senderName: "Sender A",
         senderEmail: `a.${timestamp}@example.com`,
+        status: TicketStatus.OPEN,
       },
     });
 
@@ -163,6 +173,7 @@ describe("ticketService.getAllTickets", () => {
         body: "Body Z",
         senderName: "Sender Z",
         senderEmail: `z.${timestamp}@example.com`,
+        status: TicketStatus.OPEN,
       },
     });
 
@@ -184,6 +195,7 @@ describe("ticketService.getAllTickets", () => {
         body: "High filter body",
         senderName: "High User",
         senderEmail: `highfilter.${timestamp}@example.com`,
+        status: TicketStatus.OPEN,
         priority: TicketPriority.HIGH,
       },
     });
@@ -205,6 +217,7 @@ describe("ticketService.getAllTickets", () => {
         body: "Uncategorized body",
         senderName: "Uncat User",
         senderEmail: `uncat.${timestamp}@example.com`,
+        status: TicketStatus.OPEN,
         category: null,
       },
     });
@@ -465,7 +478,7 @@ describe("ticketService.updateTicket", () => {
       subject: `Status Update Test ${timestamp}`,
       text: "Testing status change",
     });
-    expect(ticket.status).toBe(TicketStatus.OPEN);
+    expect(ticket.status).toBe(TicketStatus.NEW);
 
     const resolvedTicket = await ticketService.updateTicket(ticket.id, {
       status: TicketStatus.RESOLVED,
@@ -603,7 +616,7 @@ describe("ticketService.createReply and getRepliesByTicketId", () => {
       text: "Please resolve this",
     });
 
-    expect(ticket.status).toBe(TicketStatus.OPEN);
+    expect(ticket.status).toBe(TicketStatus.NEW);
 
     await ticketService.createReply(
       ticket.id,

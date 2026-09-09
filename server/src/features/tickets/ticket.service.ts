@@ -8,6 +8,7 @@ import {
   ensureAgentSignOff,
   extractFirstName,
   ensureCustomerGreeting,
+  formatReplyText,
 } from "./ticket.utils";
 import type {
   TicketFilterQuery,
@@ -69,6 +70,9 @@ export class TicketService {
 
     if (query?.status) {
       where.status = query.status;
+    } else {
+      // By default, do not show tickets being resolved by AI on the ticket lists (NEW and PROCESSING)
+      where.status = { notIn: [TicketStatus.NEW, TicketStatus.PROCESSING] };
     }
 
     if (query?.category !== undefined) {
@@ -143,14 +147,16 @@ export class TicketService {
   }
 
   /**
-   * Retrieve total counts of tickets broken down by status.
+   * Retrieve total counts of tickets broken down by status, excluding tickets being resolved by AI (NEW and PROCESSING).
    */
   async getTicketCounts(): Promise<TicketCounts> {
     const [total, open, resolved, closed] = await Promise.all([
-      prisma.ticket.count(),
-      prisma.ticket.count({ where: { status: "OPEN" } }),
-      prisma.ticket.count({ where: { status: "RESOLVED" } }),
-      prisma.ticket.count({ where: { status: "CLOSED" } }),
+      prisma.ticket.count({
+        where: { status: { notIn: [TicketStatus.NEW, TicketStatus.PROCESSING] } },
+      }),
+      prisma.ticket.count({ where: { status: TicketStatus.OPEN } }),
+      prisma.ticket.count({ where: { status: TicketStatus.RESOLVED } }),
+      prisma.ticket.count({ where: { status: TicketStatus.CLOSED } }),
     ]);
 
     return { total, open, resolved, closed };
@@ -437,12 +443,12 @@ export class TicketService {
       ? `\n6. Sign-off: Conclude the reply with a professional sign-off including the agent's name, formatted exactly as:\nRegards,\n${cleanAgentName}`
       : "";
 
-    const systemPrompt = `You are an expert customer support specialist.
-Your task is to polish, refine, and improve the agent's draft reply to a customer.
+    const systemPrompt = `You are an expert customer support specialist for the HelpDesk Support Team.
+Your task is to polish, refine, format, and improve the draft reply to a customer.
 Follow these guidelines:
-1. Professional & Empathetic Tone: Ensure the reply is polite, professional, supportive, and clear.
-2. Clarity & Flow: Fix any grammatical errors, improve phrasing, and ensure smooth readability.
-3. Preserve Intent: Keep all factual information, steps, technical instructions, decisions, and links from the agent's draft. Do NOT invent new commitments or promises.
+1. Professional & Customer-Friendly Tone: Ensure the reply is empathetic, polite, welcoming, professional, reassuring, and clear.
+2. Clarity, Flow & Proper Formatting: Fix any grammatical errors, improve phrasing, format clean paragraphs with blank lines between them, and present step-by-step instructions or troubleshooting procedures with clear numbered lists (1., 2., 3.) or bullet points.
+3. Preserve Intent: Keep all factual information, steps, technical instructions, decisions, and links from the draft. Do NOT invent new commitments or promises.
 4. Output Format: Return ONLY the polished reply text directly. Do not include introductory notes, commentary, quotation marks, or markdown wrappers.${greetingRule}${signOffRule}`;
 
     const customerContext = customerFirstName ? `Customer First Name: ${customerFirstName}\n` : "";
@@ -457,9 +463,10 @@ Follow these guidelines:
         prompt,
       });
 
-      let polished = text.trim();
-      polished = ensureCustomerGreeting(polished, customerFirstName);
-      polished = ensureAgentSignOff(polished, cleanAgentName);
+      const polished = formatReplyText(text, {
+        customerFirstName,
+        signOffName: cleanAgentName,
+      });
       return polished;
     } catch (error: any) {
       console.error("AI SDK error while polishing reply:", error);

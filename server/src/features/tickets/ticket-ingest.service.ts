@@ -73,7 +73,7 @@ export class TicketIngestService {
       };
     }
 
-    // Otherwise, create a new ticket
+    // Otherwise, create a new ticket (starts as NEW)
     const ticket = await prisma.ticket.create({
       data: {
         subject,
@@ -81,7 +81,7 @@ export class TicketIngestService {
         htmlBody: payload.html?.trim() || null,
         senderName,
         senderEmail,
-        status: TicketStatus.OPEN,
+        status: TicketStatus.NEW,
         priority: TicketPriority.MEDIUM,
         category: payload.category ?? null,
         messageId: payload.messageId?.trim() || null,

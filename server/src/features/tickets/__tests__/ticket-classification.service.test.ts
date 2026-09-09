@@ -281,14 +281,16 @@ describe("ticketClassificationService", () => {
     it("inbound email flow triggers classifyTicketAsync when category is omitted", async () => {
       const originalClassifyAsync = ticketClassificationService.classifyTicketAsync;
       let classifiedTicketId: number | null = null;
+      let createdTicketId: number | null = null;
       ticketClassificationService.classifyTicketAsync = mock(async (id: number) => {
         classifiedTicketId = id;
         return null;
       });
 
+      const uniqueEmail = `newstudent-${Date.now()}@example.com`;
       const req: any = {
         body: {
-          from: "New Student <newstudent@example.com>",
+          from: `New Student <${uniqueEmail}>`,
           subject: "Cannot watch video lecture 5",
           text: "The video is buffering continuously and will not start.",
         },
@@ -309,28 +311,31 @@ describe("ticketClassificationService", () => {
         expect(res.statusCode).toBe(201);
         expect(res.body.success).toBe(true);
         expect(res.body.data.id).toBeDefined();
+        createdTicketId = res.body.data.id;
 
         // Non-blocking GPT classification was triggered
         expect(classifiedTicketId).toBe(res.body.data.id);
-
-        // Clean up created ticket
-        await prisma.ticket.delete({ where: { id: res.body.data.id } });
       } finally {
         ticketClassificationService.classifyTicketAsync = originalClassifyAsync;
+        if (createdTicketId) {
+          await prisma.ticket.delete({ where: { id: createdTicketId } }).catch(() => {});
+        }
       }
     });
 
     it("inbound email flow does NOT trigger classifyTicketAsync if category was already provided", async () => {
       const originalClassifyAsync = ticketClassificationService.classifyTicketAsync;
       let called = false;
+      let createdTicketId: number | null = null;
       ticketClassificationService.classifyTicketAsync = mock(async () => {
         called = true;
         return null;
       });
 
+      const uniqueEmail = `cat-${Date.now()}@example.com`;
       const req: any = {
         body: {
-          from: "Categorized Student <cat@example.com>",
+          from: `Categorized Student <${uniqueEmail}>`,
           subject: "Already categorized ticket",
           text: "I provided a category explicitly.",
           category: "General Question",
@@ -346,11 +351,13 @@ describe("ticketClassificationService", () => {
         await handler(req, res);
 
         expect(res.statusCode).toBe(201);
+        createdTicketId = res.body?.data?.id;
         expect(called).toBe(false);
-
-        await prisma.ticket.delete({ where: { id: res.body.data.id } });
       } finally {
         ticketClassificationService.classifyTicketAsync = originalClassifyAsync;
+        if (createdTicketId) {
+          await prisma.ticket.delete({ where: { id: createdTicketId } }).catch(() => {});
+        }
       }
     });
 

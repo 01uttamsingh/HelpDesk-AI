@@ -1135,8 +1135,81 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Updated `ticket-classification.service.test.ts`:
     - Validates `classifyTicketAsync` enqueuing to `pg-boss` and UUID return format.
     - Validates error handling when queue dispatch rejects.
-  - Server Unit Tests (`bun test`): **191 / 191 passed** across 13 test suites.
-  - Production Builds: `bun run build` in `server` compiled cleanly with exit code 0.
+---
+
+### Milestone 40: Ticket Auto-Resolution via Knowledge Base & NEW / PROCESSING State Machine
+- **Feature & Requirements**:
+  - Auto-resolves incoming support tickets upon arrival using the official knowledge base file (`server/knowledge-base.md`).
+  - Implements a dedicated ticket state machine using two new enum states (`NEW` and `PROCESSING`):
+    - **`NEW`**: The initial status of newly ingested inbound tickets (`POST /api/webhooks/email` or `POST /api/tickets/inbound`).
+    - **`PROCESSING`**: Set when the AI background worker is analyzing the ticket and attempting resolution against the knowledge base.
+    - **`RESOLVED`**: Set when AI successfully answers the customer inquiry using knowledge base facts and creates an AI reply (`senderType: AI`).
+    - **`OPEN`**: Set when AI cannot resolve with high confidence, when customer requires human intervention or escalation (Section 10 rules such as refunds, bugs, billing disputes), or when an error occurs.
+  - **Exclusion Rule**: Tickets in `NEW` and `PROCESSING` states are hidden by default from ticket lists (`getAllTickets` / `GET /api/tickets`) and excluded from ticket status counts, so agents never see tickets while AI is actively working on them.
+  - Follow-up customer replies to existing tickets still transition the ticket to `OPEN` (and are not auto-resolved).
+- **Database & Prisma**:
+  - Updated `enum TicketStatus` in `server/prisma/schema.prisma` to include `NEW` and `PROCESSING`, with `@default(NEW)` on `Ticket.status`.
+  - Created migration `20260909162000_add_new_and_processing_ticket_statuses` applied to both `helpdesk` and `helpdesk_test` databases.
+  - Regenerated Prisma Client v7.10.0.
+- **Backend Architecture (`server/src/`)**:
+  - `features/tickets/ticket-auto-resolve.service.ts`:
+    - `loadKnowledgeBase()`: Caches and reads the markdown knowledge base from `server/knowledge-base.md`.
+    - `autoResolveTicket(ticketId)`:
+      - Validates ticket exists; skips already `RESOLVED` or `CLOSED` tickets.
+      - Transitions status to `TicketStatus.PROCESSING`.
+      - Calls GPT-5.6 Luna (`@ai-sdk/openai`) with structured output (`canAutoResolve`, `confidence`, `category`, `priority`, `reasoning`, `reply`).
+      - On auto-resolve: creates `TicketReply` with `senderType: ReplySenderType.AI` and marks ticket `RESOLVED`.
+      - On cannot resolve or escalation: transitions ticket to `OPEN`.
+      - On unexpected AI SDK failure: recovers ticket status to `OPEN` to prevent stuck tickets.
+    - `autoResolveTicketAsync(ticketId)`: Non-blocking background dispatch via `pg-boss`.
+  - `queue.ts`:
+    - Registered queue `ticket-auto-resolve` with `LISTEN/NOTIFY`, retry policy (3 retries, backoff), and worker handler calling `ticketAutoResolveService.autoResolveTicket(ticketId)`.
+    - Added `enqueueTicketAutoResolve(ticketId)` helper.
+  - `features/tickets/ticket-ingest.service.ts`:
+    - Sets `status: TicketStatus.NEW` on newly created inbound tickets.
+    - Sets `status: TicketStatus.OPEN` on customer follow-up replies.
+  - `features/tickets/ticket.service.ts`:
+    - In `getAllTickets`: filters out `NEW` and `PROCESSING` tickets by default (`where.status = { notIn: [TicketStatus.NEW, TicketStatus.PROCESSING] }`).
+    - In `getTicketCounts`: calculates counts across `OPEN`, `RESOLVED`, `CLOSED` and excludes `NEW` and `PROCESSING` from total.
+  - `features/tickets/ticket.controller.ts`:
+    - Mounted `autoResolveTicket(req, res)` handling manual `POST /api/tickets/:id/auto-resolve`.
+  - `features/tickets/ticket.routes.ts`:
+    - Enqueues `ticketAutoResolveService.autoResolveTicketAsync(ticket.id)` on `/email` and `/inbound` arrivals.
+    - Mounted `POST /:id/auto-resolve` route with `requireAuth`.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - `types/index.ts`: Updated `TicketStatus` type union with `"NEW" | "PROCESSING"`.
+  - `components/TicketStatusBadge.tsx`: Added badge styling for `NEW` (sky blue) and `PROCESSING` (purple with pulse dot).
+  - `components/TicketsTable.tsx`: Excluded `NEW` and `PROCESSING` tickets from table rendering.
+  - `components/UpdateTicket.tsx`: Handled `NEW` and `PROCESSING` options in the status select dropdown.
+- **Reply Formatting, Tone & Team Signature**:
+  - Implemented `formatReplyText` in [`ticket.utils.ts`](server/src/features/tickets/ticket.utils.ts):
+    - Addresses customer warmly by first name (`Dear <cust_first_name>,` or fallback `Dear Customer,` derived from `senderName` or email address).
+    - Ensures professional, empathetic, and customer-friendly tone throughout.
+    - Properly formats reply with clean paragraph breaks (`\n\n`), strips raw markdown headings (`###`), and formats numbered/bulleted lists for instructions.
+    - Signs all auto-resolved replies with `HelpDesk Support Team` (`Best regards,\nHelpDesk Support Team`).
+- **Testing & Verification**:
+  - Authored `ticket-auto-resolve.service.test.ts` (16 comprehensive tests):
+    - Knowledge base markdown loading and section verification.
+    - State transition `NEW` -> `PROCESSING` -> `RESOLVED` with `senderType: AI` reply creation.
+    - State transition `NEW` -> `PROCESSING` -> `OPEN` on non-resolvable / low confidence / escalation questions.
+    - Recovery to `OPEN` on AI API errors.
+    - Ingestion status verification (`NEW` for new, `OPEN` for follow-ups).
+    - Derived customer first name from email when `senderName` is omitted.
+    - Proper formatting verification (clean paragraphs, no raw markdown headers, signed with HelpDesk Support Team).
+    - Ticket list and counts filtering verification (excluding `NEW` and `PROCESSING`).
+    - Manual `POST /api/tickets/:id/auto-resolve` controller endpoint verification.
+  - Server Unit Tests (`bun test`): **210 / 210 passed** across 14 test suites.
+  - Client Unit Tests (`vitest run`): **149 / 149 passed** across 19 test suites.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile with 0 errors.
+  - **Live Webhook End-to-End Verification**:
+    - **Ticket #112** (Answerable via KB: password reset inquiry from Liam Cooper):
+      - Created via `POST /api/webhooks/email` -> status `NEW`.
+      - Background worker evaluated against KB -> moved to `PROCESSING` -> `RESOLVED`.
+      - Posted AI reply addressing Liam by first name (`Dear Liam,`), clear numbered steps, signed with `Best regards,\nHelpDesk Support Team`.
+    - **Ticket #113** (Unanswerable via KB: Kubernetes Helm crash on AWS EKS from Maya Lin):
+      - Created via `POST /api/webhooks/email` -> status `NEW`.
+      - Background worker detected topic not covered in KB (`canAutoResolve: false`) -> escalated to `OPEN`.
+      - Classified as `TECHNICAL_QUESTION`, priority `MEDIUM`, 0 AI replies created (waiting for human agent review).
 
 ---
 
@@ -1210,12 +1283,14 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── schema.prisma        # Prisma schema (User with deletedAt)
 │   │   ├── seed.ts              # Admin user seed script
 │   │   └── seed-tickets.ts      # 100 realistic tickets seed script
+│   ├── knowledge-base.md        # Official support knowledge base & escalation rules
 │   ├── src/
 │   │   ├── config/env.ts        # Environment validator
+│   │   ├── queue.ts             # pg-boss job queue (ticket-classification, ticket-auto-resolve)
 │   │   ├── features/            # Feature-based domain modules
 │   │   │   ├── auth/            # Auth feature: auth.ts, auth.middleware.ts
 │   │   │   ├── users/           # Users feature: routes, controller, service, schema, types
-│   │   │   └── tickets/         # Tickets feature: routes, controller, services (CRUD, AI polish/summarize, ingest), schema, types, utils, __tests__ (ticket-ai.controller, ticket-polish.service, ticket.utils, ticket.schema, ticket.service, ticket-ingest.service)
+│   │   │   └── tickets/         # Tickets feature: routes, controller, services (CRUD, AI polish/summarize, classification, auto-resolve, ingest), schema, types, utils, __tests__ (ticket-ai.controller, ticket-polish.service, ticket.utils, ticket.schema, ticket.service, ticket-ingest.service, ticket-classification.service, ticket-auto-resolve.service)
 │   │   ├── middleware/          # Backward-compatibility auth.middleware.ts
 │   │   ├── routes/              # Backward-compatibility admin.routes.ts & user.routes.ts
 │   │   ├── controllers/         # Backward-compatibility user.controller.ts

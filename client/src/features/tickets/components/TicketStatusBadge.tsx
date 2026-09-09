@@ -8,6 +8,16 @@ interface TicketStatusBadgeProps {
 
 export function TicketStatusBadge({ status, className }: TicketStatusBadgeProps) {
   const config = {
+    NEW: {
+      label: "New",
+      badgeClass: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+      dotClass: "bg-sky-500",
+    },
+    PROCESSING: {
+      label: "Processing",
+      badgeClass: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
+      dotClass: "bg-purple-500",
+    },
     OPEN: {
       label: "Open",
       badgeClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",

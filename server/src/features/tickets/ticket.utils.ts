@@ -113,6 +113,10 @@ export function ensureAgentSignOff(text: string, agentName?: string): string {
   const placeholderRegex = /\[(?:Agent Name|Your Name|Name|Support Agent|Agent)\]/gi;
   result = result.replace(placeholderRegex, name);
 
+  // Replace older/generic team signatures if present
+  const oldTeamRegex = /(?:Code with Mosh Support Team|Mosh Support Team)/gi;
+  result = result.replace(oldTeamRegex, name);
+
   // 2. Check if the text already ends with a sign-off mentioning the agent's name
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const existingSignOffRegex = new RegExp(
@@ -186,5 +190,39 @@ export function ensureCustomerGreeting(text: string, customerFirstName?: string)
 
   // 3. If no greeting was present at all, prepend "Dear <firstName>,\n\n"
   return `Dear ${firstName},\n\n${result}`;
+}
+
+/**
+ * Formats a support reply email ensuring:
+ * 1. Addressing the customer by first name ("Dear <FirstName>,").
+ * 2. Proper paragraph formatting with clean double-newline spacing.
+ * 3. Stripping any extraneous markdown heading prefixes (e.g. "### Steps").
+ * 4. Professional closing sign-off (e.g. "Best regards,\nHelpDesk Support Team").
+ */
+export function formatReplyText(
+  text: string,
+  options?: {
+    customerFirstName?: string;
+    signOffName?: string;
+  }
+): string {
+  if (!text || !text.trim()) return "";
+
+  let formatted = text
+    .trim()
+    // Strip markdown headings (e.g., "### Steps to take" -> "Steps to take")
+    .replace(/^#{1,6}\s+/gm, "")
+    // Normalize 3+ newlines to 2 newlines for clean paragraph spacing
+    .replace(/\n{3,}/g, "\n\n");
+
+  if (options?.customerFirstName) {
+    formatted = ensureCustomerGreeting(formatted, options.customerFirstName);
+  }
+
+  if (options?.signOffName) {
+    formatted = ensureAgentSignOff(formatted, options.signOffName);
+  }
+
+  return formatted;
 }
 
