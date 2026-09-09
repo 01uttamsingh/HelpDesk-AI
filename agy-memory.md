@@ -1071,6 +1071,75 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 38: Automatic Non-Blocking Ticket Classification with GPT
+- **Feature & Requirements**:
+  - Automatically classifies incoming tickets using GPT in a non-blocking fashion.
+  - When an incoming support email arrives (`POST /api/webhooks/email` or `POST /api/tickets/inbound`), the server immediately responds to the webhook sender with `201 Created` with `<50ms` latency without waiting for LLM inference.
+  - In the background, GPT (`gpt-5.6-luna` via Vercel AI SDK `@ai-sdk/openai` + `generateText` with `Output.object`) analyzes the ticket subject and body.
+  - Predicts `TicketCategory` (`GENERAL_QUESTION`, `TECHNICAL_QUESTION`, `REFUND_REQUEST`), detects urgency `TicketPriority` (`LOW`, `MEDIUM`, `HIGH`), and records reasoning.
+  - Updates the ticket record in PostgreSQL (`prisma.ticket.update`).
+  - Preserves explicit category if already provided by caller (e.g. specialized webhook headers or test data).
+  - Skips classification on incoming follow-up reply messages (`isReply: true`).
+  - Includes manual `POST /api/tickets/:id/classify` route for authenticated agents to re-classify on demand.
+- **Backend Architecture (`server/src/features/tickets/`)**:
+  - `ticket-classification.service.ts`:
+    - Structured output schema `ticketClassificationOutputSchema` with `category`, `priority`, and `reasoning`.
+    - `classifyTicket(ticketId)`: Queries ticket, checks `OPENAI_API_KEY`, calls GPT with `Output.object`, validates structured output, updates PostgreSQL record.
+    - `classifyTicketAsync(ticketId)`: Non-blocking background worker with complete error catching and logging, ensuring zero unhandled promise rejections.
+  - `ticket.controller.ts`:
+    - Updated `handleInboundEmail` to return `Promise<IngestInboundEmailResult | null>`.
+    - Added `classifyTicket(req, res)` controller action.
+  - `ticket.routes.ts`:
+    - Updated `webhookRoutes.post("/email")` and `ticketRoutes.post("/inbound")` to trigger `ticketClassificationService.classifyTicketAsync(ticket.id)` non-blocking when a new ticket has no category.
+    - Mounted `ticketRoutes.post("/:id/classify", requireAuth, ...)` for manual agent classification.
+  - `index.ts`: Barrel export updated with `export * from "./ticket-classification.service"`.
+- **Testing & Verification**:
+  - Authored `ticket-classification.service.test.ts` (12 unit tests):
+    - Technical question, refund request, and general question classification verification.
+    - Database persistence verification (`category` and `priority` columns).
+    - 404 TicketServiceError when ticket does not exist.
+    - 502 TicketServiceError mapping when AI generation fails.
+    - Graceful background error handling in `classifyTicketAsync`.
+    - `POST /api/tickets/:id/classify` controller action success (200) and invalid param (400).
+    - Non-blocking webhook integration triggering async classification on uncategorized tickets.
+    - Skipping classification when category is already set or when message is a reply.
+  - Server Unit Tests (`bun test`): **188 / 188 passed** across 12 files.
+  - Production Builds: `bun run build` in `server` compiled cleanly with exit code 0.
+
+---
+
+### Milestone 39: pg-boss Background Job Queue Integration for Ticket Classification
+- **Feature & Requirements**:
+  - Replaced ad-hoc in-process promises with **pg-boss** (`pg-boss` v12.30.0), a battle-tested PostgreSQL-based background job queue.
+  - When an incoming support email arrives (`POST /api/webhooks/email` or `POST /api/tickets/inbound`), the server immediately responds to the caller with `201 Created` (< 60ms).
+  - The ticket classification job `{ ticketId }` is enqueued into `pg-boss` queue (`ticket-classification`).
+  - Uses native PostgreSQL `LISTEN/NOTIFY` (`useListenNotify: true` + `{ notify: true }`) for instant, low-latency dispatch (< 300ms) without waiting for slow polling intervals.
+  - Configured with automatic retry policies: `retryLimit: 3`, `retryDelay: 5` seconds, exponential backoff (`retryBackoff: true`), and 60-second expiration.
+  - Gracefully discards deleted/non-existent tickets (404) without useless retries.
+  - Graceful lifecycle integration in `server/src/index.ts` with `startQueue()` on startup and `stopQueue({ graceful: true })` on `SIGINT`/`SIGTERM`.
+- **Backend Architecture (`server/src/`)**:
+  - `queue.ts`:
+    - Singleton `PgBoss` client initialized with `DATABASE_URL`.
+    - `startQueue()`: Starts worker on `ticket-classification` queue with `LISTEN/NOTIFY`.
+    - `stopQueue()`: Graceful worker shutdown and database pool termination.
+    - `clearQueue()`: Utility for test/maintenance purging of jobs (`deleteAllJobs`).
+    - `enqueueTicketClassification(ticketId)`: Idempotently ensures queue is started and enqueues job with retry policy.
+  - `features/tickets/ticket-classification.service.ts`:
+    - `classifyTicketAsync(ticketId)`: Delegates directly to `enqueueTicketClassification(ticketId)`.
+  - `features/tickets/ticket.routes.ts`:
+    - Inbound email routes (`/email`, `/inbound`) enqueue classification jobs via `classifyTicketAsync`.
+- **Testing & Verification**:
+  - Authored `server/src/__tests__/queue.test.ts` (3 tests):
+    - Validates queue name constants and singleton instance.
+    - Tests end-to-end `LISTEN/NOTIFY` dispatch: enqueues job -> worker processes -> database record updated.
+  - Updated `ticket-classification.service.test.ts`:
+    - Validates `classifyTicketAsync` enqueuing to `pg-boss` and UUID return format.
+    - Validates error handling when queue dispatch rejects.
+  - Server Unit Tests (`bun test`): **191 / 191 passed** across 13 test suites.
+  - Production Builds: `bun run build` in `server` compiled cleanly with exit code 0.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text

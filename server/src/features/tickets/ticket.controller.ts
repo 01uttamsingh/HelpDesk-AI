@@ -9,7 +9,8 @@ import {
   createReplySchema,
   polishReplySchema,
 } from "./ticket.schema";
-import { ticketIngestService } from "./ticket-ingest.service";
+import { ticketIngestService, type IngestInboundEmailResult } from "./ticket-ingest.service";
+import { ticketClassificationService } from "./ticket-classification.service";
 import { ticketService, TicketServiceError } from "./ticket.service";
 import type { AuthenticatedRequest } from "../auth";
 
@@ -18,7 +19,7 @@ export class TicketController {
    * POST /api/webhooks/email
    * Ingests an inbound support email and converts it into a ticket.
    */
-  async handleInboundEmail(req: Request, res: Response): Promise<void> {
+  async handleInboundEmail(req: Request, res: Response): Promise<IngestInboundEmailResult | null> {
     try {
       const validatedPayload = inboundEmailSchema.parse(req.body);
       const ticket = await ticketIngestService.ingestInboundEmail(validatedPayload);
@@ -27,6 +28,8 @@ export class TicketController {
         success: true,
         data: ticket,
       });
+
+      return ticket;
     } catch (error: unknown) {
       if (error instanceof ZodError) {
         res.status(400).json({
@@ -37,7 +40,7 @@ export class TicketController {
             message: err.message,
           })),
         });
-        return;
+        return null;
       }
 
       console.error("Inbound email ingestion failed:", error);
@@ -45,6 +48,7 @@ export class TicketController {
         success: false,
         error: "Failed to process inbound email",
       });
+      return null;
     }
   }
 
@@ -463,6 +467,44 @@ export class TicketController {
       res.status(500).json({
         success: false,
         error: error?.message || "Failed to summarize ticket",
+      });
+    }
+  }
+
+  /**
+   * POST /api/tickets/:id/classify
+   * Manually trigger AI classification for a ticket using GPT.
+   */
+  async classifyTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const parsedParams = ticketIdParamSchema.safeParse(req.params);
+      if (!parsedParams.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid ticket ID. Must be a positive integer.",
+        });
+        return;
+      }
+
+      const result = await ticketClassificationService.classifyTicket(parsedParams.data.id);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error instanceof TicketServiceError) {
+        res.status(error.statusCode).json({
+          success: false,
+          error: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to classify ticket:", error);
+      res.status(500).json({
+        success: false,
+        error: error?.message || "Failed to classify ticket",
       });
     }
   }

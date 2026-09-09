@@ -1,14 +1,27 @@
 import { Router } from "express";
 import { ticketController } from "./ticket.controller";
+import { ticketClassificationService } from "./ticket-classification.service";
 import { requireAuth } from "../auth";
 
 // Webhook Router (public, intended for email provider / webhook payloads)
 export const webhookRoutes = Router();
-webhookRoutes.post("/email", (req, res) => ticketController.handleInboundEmail(req, res));
+webhookRoutes.post("/email", async (req, res) => {
+  const ticket = await ticketController.handleInboundEmail(req, res);
+  // Non-blocking automatic classification via pg-boss for new incoming tickets without explicit category
+  if (ticket && !ticket.isReply && !ticket.category) {
+    ticketClassificationService.classifyTicketAsync(ticket.id);
+  }
+});
 
 // Ticket Router (for authenticated agents and inbound email alias)
 export const ticketRoutes = Router();
-ticketRoutes.post("/inbound", (req, res) => ticketController.handleInboundEmail(req, res));
+ticketRoutes.post("/inbound", async (req, res) => {
+  const ticket = await ticketController.handleInboundEmail(req, res);
+  // Non-blocking automatic classification via pg-boss for new incoming tickets without explicit category
+  if (ticket && !ticket.isReply && !ticket.category) {
+    ticketClassificationService.classifyTicketAsync(ticket.id);
+  }
+});
 ticketRoutes.get("/", requireAuth, (req, res) => ticketController.getTickets(req, res));
 ticketRoutes.get("/assignees", requireAuth, (req, res) => ticketController.getAssignees(req, res));
 ticketRoutes.get("/:id", requireAuth, (req, res) => ticketController.getTicketById(req, res));
@@ -19,6 +32,7 @@ ticketRoutes.post("/:id/replies", requireAuth, (req, res) => ticketController.cr
 ticketRoutes.post("/polish-reply", requireAuth, (req, res) => ticketController.polishReply(req, res));
 ticketRoutes.post("/:id/polish-reply", requireAuth, (req, res) => ticketController.polishReply(req, res));
 ticketRoutes.post("/:id/summarize", requireAuth, (req, res) => ticketController.summarizeTicket(req, res));
+ticketRoutes.post("/:id/classify", requireAuth, (req, res) => ticketController.classifyTicket(req, res));
 
 
 

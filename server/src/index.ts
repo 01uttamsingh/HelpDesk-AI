@@ -8,6 +8,7 @@ import { env, getTrustedOrigins } from "./config/env";
 import adminRoutes from "./routes/admin.routes";
 import { userRoutes } from "./features/users";
 import { webhookRoutes, ticketRoutes } from "./features/tickets";
+import { startQueue, stopQueue } from "./queue";
 
 // Prevent Bun event loop idle exit on Windows
 setInterval(() => {}, 1000 * 60 * 60);
@@ -133,9 +134,26 @@ app.listen(PORT, async () => {
   try {
     await prisma.$connect();
     console.log(`✅ Connected to PostgreSQL database (helpdesk)`);
+    await startQueue();
+    console.log(`✅ Started pg-boss job queue (ticket-classification)`);
   } catch (err) {
-    console.error(`❌ Failed to connect to database:`, err);
+    console.error(`❌ Failed during startup:`, err);
   }
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🔒 Trusted CORS origins: ${trustedOrigins.join(", ")}`);
 });
+
+process.on("SIGINT", async () => {
+  console.log("\nGracefully shutting down server and pg-boss...");
+  await stopQueue();
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("\nGracefully shutting down server and pg-boss...");
+  await stopQueue();
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
