@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TicketReplyForm } from "../components/TicketReplyForm";
+import { AuthContext } from "@/features/auth";
 import { api } from "@/lib/api";
 import { renderWithQuery } from "@/test/renderWithQuery";
 
@@ -201,6 +202,127 @@ describe("TicketReplyForm", () => {
     await waitFor(() => {
       expect(screen.getByTestId("reply-error-alert")).toBeInTheDocument();
       expect(screen.getByText("AI service unavailable")).toBeInTheDocument();
+    });
+  });
+
+  it("includes agent name in the polish request when user session is active", async () => {
+    const user = userEvent.setup();
+    const postSpy = vi.spyOn(api, "post").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          polishedText:
+            "Thank you for contacting us. We have reviewed your request.\n\nRegards,\nAgent Sarah",
+        },
+      },
+    });
+
+    const mockSession = {
+      user: {
+        id: "1",
+        name: "Agent Sarah",
+        email: "sarah@example.com",
+        emailVerified: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      session: {
+        id: "s1",
+        userId: "1",
+        expiresAt: new Date().toISOString(),
+        token: "tok",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    };
+
+    renderWithQuery(
+      <AuthContext.Provider
+        value={{
+          data: mockSession,
+          isPending: false,
+          error: null,
+          refetch: async () => {},
+        }}
+      >
+        <TicketReplyForm ticketId={101} currentStatus="OPEN" />
+      </AuthContext.Provider>
+    );
+
+    const textarea = screen.getByTestId("reply-body-input");
+    await user.type(textarea, "reviewed your request");
+    await user.click(screen.getByTestId("polish-reply-button"));
+
+    expect(postSpy).toHaveBeenCalledWith("/api/tickets/101/polish-reply", {
+      text: "reviewed your request",
+      agentName: "Agent Sarah",
+    });
+
+    await waitFor(() => {
+      expect(textarea).toHaveValue(
+        "Thank you for contacting us. We have reviewed your request.\n\nRegards,\nAgent Sarah"
+      );
+    });
+  });
+
+  it("includes customer name and agent name in polish request and displays greeting & sign-off", async () => {
+    const user = userEvent.setup();
+    const postSpy = vi.spyOn(api, "post").mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          polishedText:
+            "Dear John,\n\nThank you for contacting us. We have reviewed your request.\n\nRegards,\nAgent Sarah",
+        },
+      },
+    });
+
+    const mockSession = {
+      user: {
+        id: "1",
+        name: "Agent Sarah",
+        email: "sarah@example.com",
+        emailVerified: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      session: {
+        id: "s1",
+        userId: "1",
+        expiresAt: new Date().toISOString(),
+        token: "tok",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    };
+
+    renderWithQuery(
+      <AuthContext.Provider
+        value={{
+          data: mockSession,
+          isPending: false,
+          error: null,
+          refetch: async () => {},
+        }}
+      >
+        <TicketReplyForm ticketId={101} currentStatus="OPEN" customerName="John Doe" />
+      </AuthContext.Provider>
+    );
+
+    const textarea = screen.getByTestId("reply-body-input");
+    await user.type(textarea, "reviewed your request");
+    await user.click(screen.getByTestId("polish-reply-button"));
+
+    expect(postSpy).toHaveBeenCalledWith("/api/tickets/101/polish-reply", {
+      text: "reviewed your request",
+      agentName: "Agent Sarah",
+      customerName: "John Doe",
+    });
+
+    await waitFor(() => {
+      expect(textarea).toHaveValue(
+        "Dear John,\n\nThank you for contacting us. We have reviewed your request.\n\nRegards,\nAgent Sarah"
+      );
     });
   });
 });

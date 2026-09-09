@@ -993,6 +993,55 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 35: Agent Sign-off on AI Polish Replies
+- **Feature & Requirements**:
+  - Included the agent's name in the closing sign-off of AI polished replies (e.g., `Regards,\n<agent_name>`).
+- **Backend Architecture (`server/src/features/tickets/`)**:
+  - Added optional `agentName` in `polishReplySchema` (`ticket.schema.ts`).
+  - Added `ensureAgentSignOff(text, agentName)` in `ticket.utils.ts` to guarantee sign-offs are formatted as `Regards,\n<agent_name>`, replacing placeholders like `[Agent Name]`, preserving existing sign-offs, and completing trailing "Regards,".
+  - Updated `ticketService.polishReply(ticketId, draftReply, agentName)` in `ticket.service.ts` to instruct GPT-5.6 Luna with explicit sign-off guidelines and agent context.
+  - Updated `ticketController.polishReply` in `ticket.controller.ts` to extract the agent name from the request body or the authenticated session (`req.user?.name`).
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - Updated `polishTicketReply` in `tickets.api.ts` and `usePolishReply` hook to accept optional `agentName`.
+  - Updated `TicketReplyForm.tsx` to retrieve the current user's name via `useSession()` and pass it to `polishReply`.
+- **Testing & Verification**:
+  - Added unit tests in `ticket.utils.test.ts` for `ensureAgentSignOff` covering trailing regards, placeholders, existing sign-offs, and missing names.
+  - Added unit tests in `ticket.schema.test.ts` for `agentName` in `polishReplySchema`.
+  - Added unit tests in `ticket-polish.service.test.ts` for `polishReply` with `agentName` in prompt and sign-off guarantee.
+  - Added component test in `TicketReplyForm.test.tsx` verifying `agentName` inclusion in request and text area population.
+  - Server Unit Tests (`bun test`): **149 / 149 passed** across 10 files.
+  - Client Unit Tests (`bun run test:unit`): **142 / 142 passed** across 18 files.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile with 0 errors.
+
+---
+
+### Milestone 36: Customer Name Greeting in AI Polished Replies
+- **Feature & Requirements**:
+  - Automatically addresses the customer by first name in the greeting of AI polished replies (`Dear <cust_first_name>,`).
+- **Backend Architecture (`server/src/features/tickets/`)**:
+  - Added optional `customerName` in `polishReplySchema` (`ticket.schema.ts`).
+  - Added `extractFirstName(fullName)` in `ticket.utils.ts` to extract and capitalize the first name from full names, display names, and handles (skipping courtesy titles like Dr., Mr., Ms.).
+  - Added `ensureCustomerGreeting(text, customerFirstName)` in `ticket.utils.ts` to normalize existing greetings (Hi, Hello, Dear Customer) or prepend `Dear <cust_first_name>,\n\n`.
+  - Updated `ticketService.polishReply(ticketId, draftReply, agentName, customerName)` in `ticket.service.ts`:
+    - Reads `senderName` from the ticket database record if not passed in the request body.
+    - Instructs GPT-5.6 Luna with explicit greeting guidelines: `Dear <cust_first_name>,`.
+    - Guarantees both customer greeting and agent sign-off in the final output.
+  - Updated `ticketController.polishReply` to extract `customerName` from the request body.
+- **Frontend Architecture (`client/src/features/tickets/`)**:
+  - Updated `polishTicketReply` in `tickets.api.ts` and `usePolishReply` hook to accept optional `customerName`.
+  - Updated `TicketReplyForm.tsx` to accept `customerName` prop and forward it to `polishReply`.
+  - Updated `TicketDetailPage.tsx` to pass `customerName={ticket.senderName}` to `TicketReplyForm`.
+- **Testing & Verification**:
+  - Added unit tests in `ticket.utils.test.ts` for `extractFirstName` and `ensureCustomerGreeting`.
+  - Added unit tests in `ticket.schema.test.ts` for `customerName` in `polishReplySchema`.
+  - Added unit tests in `ticket-polish.service.test.ts` verifying greeting generation and DB fallback.
+  - Added component test in `TicketReplyForm.test.tsx` verifying customer name is passed and greeting rendered.
+  - Server Unit Tests (`bun test`): **159 / 159 passed** across 10 files.
+  - Client Unit Tests (`bun run test:unit`): **143 / 143 passed** across 18 files.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text

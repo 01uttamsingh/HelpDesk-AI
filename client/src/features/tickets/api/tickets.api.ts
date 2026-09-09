@@ -164,12 +164,18 @@ export interface PolishReplyResponse {
 
 export async function polishTicketReply(
   text: string,
-  ticketId?: number
+  ticketId?: number,
+  agentName?: string,
+  customerName?: string
 ): Promise<{ polishedText: string }> {
   const endpoint = ticketId
     ? `/api/tickets/${ticketId}/polish-reply`
     : `/api/tickets/polish-reply`;
-  const res = await api.post<PolishReplyResponse>(endpoint, { text });
+  const res = await api.post<PolishReplyResponse>(endpoint, {
+    text,
+    ...(agentName ? { agentName } : {}),
+    ...(customerName ? { customerName } : {}),
+  });
   return res.data.data;
 }
 

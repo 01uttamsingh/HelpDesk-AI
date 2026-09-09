@@ -137,7 +137,11 @@ export function TicketDetailPage() {
           <TicketRepliesThread ticket={ticket} replies={ticket.replies ?? []} />
 
           {/* Reply Form */}
-          <TicketReplyForm ticketId={ticket.id} currentStatus={ticket.status} />
+          <TicketReplyForm
+            ticketId={ticket.id}
+            currentStatus={ticket.status}
+            customerName={ticket.senderName}
+          />
         </div>
 
         {/* Sidebar Info (Metadata & Customer Info) */}

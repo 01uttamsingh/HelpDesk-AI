@@ -392,7 +392,17 @@ export class TicketController {
       const rawText =
         parsedBody.data.text || parsedBody.data.body || parsedBody.data.draft || "";
 
-      const polishedText = await ticketService.polishReply(ticketId, rawText);
+      const user = (req as AuthenticatedRequest).user;
+      const agentName =
+        parsedBody.data.agentName?.trim() || user?.name?.trim() || undefined;
+      const customerName = parsedBody.data.customerName?.trim() || undefined;
+
+      const polishedText = await ticketService.polishReply(
+        ticketId,
+        rawText,
+        agentName,
+        customerName
+      );
 
       res.status(200).json({
         success: true,

@@ -156,6 +156,8 @@ export const polishReplySchema = z
     text: z.string().optional(),
     body: z.string().optional(),
     draft: z.string().optional(),
+    agentName: z.string().optional(),
+    customerName: z.string().optional(),
   })
   .refine(
     (data) =>

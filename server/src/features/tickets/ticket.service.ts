@@ -1,9 +1,14 @@
 import prisma from "../../prisma";
 import { TicketStatus, ReplySenderType, type Ticket, type Prisma } from "@prisma/client";
 import { generateText } from "ai";
-import { createOpenAI, openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { env } from "../../config/env";
-import { cleanSummaryText } from "./ticket.utils";
+import {
+  cleanSummaryText,
+  ensureAgentSignOff,
+  extractFirstName,
+  ensureCustomerGreeting,
+} from "./ticket.utils";
 import type {
   TicketFilterQuery,
   TicketCounts,
@@ -385,8 +390,14 @@ export class TicketService {
 
   /**
    * Polish and improve an agent's draft reply using GPT-5.6 Luna via the Vercel AI SDK.
+   * Includes customer first name greeting ("Dear <cust_first_name>,") and agent sign-off ("Regards,\n<agent_name>").
    */
-  async polishReply(ticketId: number | null, draftReply: string): Promise<string> {
+  async polishReply(
+    ticketId: number | null,
+    draftReply: string,
+    agentName?: string,
+    customerName?: string
+  ): Promise<string> {
     const trimmedDraft = draftReply?.trim();
     if (!trimmedDraft) {
       throw new TicketServiceError("Draft reply text is required", 400);
@@ -400,16 +411,31 @@ export class TicketService {
       );
     }
 
+    let resolvedCustomerName = customerName?.trim() || "";
     let ticketContext = "";
     if (ticketId !== null) {
       const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId },
-        select: { subject: true, body: true },
+        select: { subject: true, body: true, senderName: true },
       });
       if (ticket) {
+        if (!resolvedCustomerName && ticket.senderName) {
+          resolvedCustomerName = ticket.senderName.trim();
+        }
         ticketContext = `Customer Ticket Subject: ${ticket.subject}\nCustomer Issue Description: ${ticket.body}\n\n`;
       }
     }
+
+    const customerFirstName = extractFirstName(resolvedCustomerName);
+    const cleanAgentName = agentName?.trim();
+
+    const greetingRule = customerFirstName
+      ? `\n5. Customer Greeting: Begin the reply with a polite greeting addressing the customer by their first name, formatted exactly as:\nDear ${customerFirstName},`
+      : "";
+
+    const signOffRule = cleanAgentName
+      ? `\n6. Sign-off: Conclude the reply with a professional sign-off including the agent's name, formatted exactly as:\nRegards,\n${cleanAgentName}`
+      : "";
 
     const systemPrompt = `You are an expert customer support specialist.
 Your task is to polish, refine, and improve the agent's draft reply to a customer.
@@ -417,9 +443,11 @@ Follow these guidelines:
 1. Professional & Empathetic Tone: Ensure the reply is polite, professional, supportive, and clear.
 2. Clarity & Flow: Fix any grammatical errors, improve phrasing, and ensure smooth readability.
 3. Preserve Intent: Keep all factual information, steps, technical instructions, decisions, and links from the agent's draft. Do NOT invent new commitments or promises.
-4. Output Format: Return ONLY the polished reply text directly. Do not include introductory notes, commentary, quotation marks, or markdown wrappers.`;
+4. Output Format: Return ONLY the polished reply text directly. Do not include introductory notes, commentary, quotation marks, or markdown wrappers.${greetingRule}${signOffRule}`;
 
-    const prompt = `${ticketContext}Agent's Draft Reply:\n${trimmedDraft}`;
+    const customerContext = customerFirstName ? `Customer First Name: ${customerFirstName}\n` : "";
+    const agentContext = cleanAgentName ? `Agent Name: ${cleanAgentName}\n` : "";
+    const prompt = `${ticketContext}${customerContext}${agentContext}Agent's Draft Reply:\n${trimmedDraft}`;
 
     try {
       const openaiProvider = createOpenAI({ apiKey });
@@ -429,7 +457,10 @@ Follow these guidelines:
         prompt,
       });
 
-      return text.trim();
+      let polished = text.trim();
+      polished = ensureCustomerGreeting(polished, customerFirstName);
+      polished = ensureAgentSignOff(polished, cleanAgentName);
+      return polished;
     } catch (error: any) {
       console.error("AI SDK error while polishing reply:", error);
       throw new TicketServiceError(

@@ -1,5 +1,14 @@
 import { describe, it, expect } from "bun:test";
-import { parseEmailAddress, cleanSubject, deriveNameFromEmail, normalizeSubject, cleanSummaryText } from "../ticket.utils";
+import {
+  parseEmailAddress,
+  cleanSubject,
+  deriveNameFromEmail,
+  normalizeSubject,
+  cleanSummaryText,
+  ensureAgentSignOff,
+  extractFirstName,
+  ensureCustomerGreeting,
+} from "../ticket.utils";
 
 describe("ticket.utils", () => {
   describe("parseEmailAddress", () => {
@@ -125,6 +134,101 @@ describe("ticket.utils", () => {
     it("handles empty or null string gracefully", () => {
       expect(cleanSummaryText("")).toBe("");
       expect(cleanSummaryText(null as unknown as string)).toBe("");
+    });
+  });
+
+  describe("ensureAgentSignOff", () => {
+    it("returns trimmed text unmodified if agentName is empty or undefined", () => {
+      const text = "We have looked into your issue and fixed it.";
+      expect(ensureAgentSignOff(text)).toBe(text);
+      expect(ensureAgentSignOff(text, "")).toBe(text);
+      expect(ensureAgentSignOff(text, "   ")).toBe(text);
+    });
+
+    it("appends Regards, <agent_name> when no sign-off is present", () => {
+      const text = "We have investigated the problem and deployed a patch.";
+      const result = ensureAgentSignOff(text, "Admin");
+      expect(result).toBe("We have investigated the problem and deployed a patch.\n\nRegards,\nAdmin");
+    });
+
+    it("preserves existing sign-off when agent name is already included", () => {
+      const text = "Thanks for your patience.\n\nRegards,\nSarah";
+      expect(ensureAgentSignOff(text, "Sarah")).toBe(text);
+
+      const singleLineText = "Thanks for your patience.\n\nRegards, Sarah";
+      expect(ensureAgentSignOff(singleLineText, "Sarah")).toBe(singleLineText);
+
+      const bestRegardsText = "Thanks for your patience.\n\nBest regards,\nSarah";
+      expect(ensureAgentSignOff(bestRegardsText, "Sarah")).toBe(bestRegardsText);
+    });
+
+    it("replaces placeholder tokens like [Agent Name] with the agent name", () => {
+      const text = "We have refunded your order.\n\nRegards,\n[Agent Name]";
+      const result = ensureAgentSignOff(text, "John Doe");
+      expect(result).toBe("We have refunded your order.\n\nRegards,\nJohn Doe");
+    });
+
+    it("completes trailing Regards, when name was omitted by model", () => {
+      const text = "We have refunded your order.\n\nRegards,";
+      const result = ensureAgentSignOff(text, "John Doe");
+      expect(result).toBe("We have refunded your order.\n\nRegards,\nJohn Doe");
+    });
+  });
+
+  describe("extractFirstName", () => {
+    it("extracts and capitalizes first name from full name", () => {
+      expect(extractFirstName("John Doe")).toBe("John");
+      expect(extractFirstName("alice smith")).toBe("Alice");
+      expect(extractFirstName("david")).toBe("David");
+    });
+
+    it("skips courtesy titles like Dr., Mr., Ms.", () => {
+      expect(extractFirstName("Dr. Gregory House")).toBe("Gregory");
+      expect(extractFirstName("Mr. Thomas Anderson")).toBe("Thomas");
+      expect(extractFirstName("Ms. Jane Doe")).toBe("Jane");
+    });
+
+    it("handles empty, null, or undefined values gracefully", () => {
+      expect(extractFirstName("")).toBe("");
+      expect(extractFirstName("   ")).toBe("");
+      expect(extractFirstName(null)).toBe("");
+      expect(extractFirstName(undefined)).toBe("");
+    });
+  });
+
+  describe("ensureCustomerGreeting", () => {
+    it("returns trimmed text unmodified if customerFirstName is empty or undefined", () => {
+      const text = "Thank you for reaching out. We have solved your issue.";
+      expect(ensureCustomerGreeting(text)).toBe(text);
+      expect(ensureCustomerGreeting(text, "")).toBe(text);
+      expect(ensureCustomerGreeting(text, "   ")).toBe(text);
+    });
+
+    it("prepends Dear <cust_first_name>, when no greeting is present", () => {
+      const text = "Thank you for contacting us. We have refunded your purchase.";
+      const result = ensureCustomerGreeting(text, "Alex");
+      expect(result).toBe("Dear Alex,\n\nThank you for contacting us. We have refunded your purchase.");
+    });
+
+    it("preserves/normalizes existing Dear <cust_first_name>, greeting", () => {
+      const text = "Dear Alex,\n\nWe have verified your account.";
+      expect(ensureCustomerGreeting(text, "Alex")).toBe("Dear Alex,\n\nWe have verified your account.");
+    });
+
+    it("normalizes other greetings like Hi, Hello, or Dear Customer to Dear <cust_first_name>,", () => {
+      const text = "Hello Alex,\n\nWe have verified your account.";
+      expect(ensureCustomerGreeting(text, "Alex")).toBe("Dear Alex,\n\nWe have verified your account.");
+
+      const hiText = "Hi there,\n\nYour ticket has been updated.";
+      expect(ensureCustomerGreeting(hiText, "Alex")).toBe("Dear Alex,\n\nYour ticket has been updated.");
+
+      const dearCustomerText = "Dear Customer,\n\nYour ticket has been updated.";
+      expect(ensureCustomerGreeting(dearCustomerText, "Alex")).toBe("Dear Alex,\n\nYour ticket has been updated.");
+    });
+
+    it("replaces placeholder brackets with customer first name", () => {
+      const text = "Dear [Customer Name],\n\nWe have updated your records.";
+      expect(ensureCustomerGreeting(text, "Alex")).toBe("Dear Alex,\n\nWe have updated your records.");
     });
   });
 });

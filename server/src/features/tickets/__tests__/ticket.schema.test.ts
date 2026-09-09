@@ -329,6 +329,17 @@ describe("ticket.schema", () => {
       expect(parsed.draft).toBe("Quick notes");
     });
 
+    it("accepts optional agentName and customerName fields", () => {
+      const parsed = polishReplySchema.parse({
+        text: "Please try reloading the page.",
+        agentName: "Agent Smith",
+        customerName: "Jane Doe",
+      });
+      expect(parsed.text).toBe("Please try reloading the page.");
+      expect(parsed.agentName).toBe("Agent Smith");
+      expect(parsed.customerName).toBe("Jane Doe");
+    });
+
     it("rejects payload when text, body, and draft are all empty or whitespace", () => {
       expect(() => polishReplySchema.parse({})).toThrow();
       expect(() => polishReplySchema.parse({ text: "   " })).toThrow();

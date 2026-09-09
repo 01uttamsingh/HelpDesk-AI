@@ -6,21 +6,27 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateReply } from "../hooks/useCreateReply";
 import { usePolishReply } from "../hooks/usePolishReply";
+import { useSession } from "@/features/auth";
 import type { TicketStatus } from "../types";
 import { getErrorMessage } from "@/features/users/utils/error";
 
 interface TicketReplyFormProps {
   ticketId: number;
   currentStatus?: TicketStatus;
+  customerName?: string;
 }
 
 export function TicketReplyForm({
   ticketId,
   currentStatus = "OPEN",
+  customerName,
 }: TicketReplyFormProps) {
   const [body, setBody] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | "">("");
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const { data: session } = useSession();
+  const agentName = session?.user?.name;
 
   const { mutate: sendReply, isPending, error } = useCreateReply(ticketId);
   const {
@@ -57,7 +63,7 @@ export function TicketReplyForm({
     setValidationError(null);
 
     polishReply(
-      { text: trimmedBody },
+      { text: trimmedBody, agentName, customerName },
       {
         onSuccess: (data) => {
           setBody(data.polishedText);

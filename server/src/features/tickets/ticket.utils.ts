@@ -93,3 +93,98 @@ export function cleanSummaryText(text: string): string {
     .trim();
 }
 
+/**
+ * Ensures the polished reply ends with the agent's sign-off.
+ * If the agent's name is provided:
+ * - Replaces any placeholder brackets like [Agent Name], [Your Name], [Name], [Support Agent].
+ * - If a sign-off like "Regards, <agentName>" or "Best regards, <agentName>" is already present at the end, preserves it.
+ * - If trailing with "Regards," without a name, completes it with the agent's name.
+ * - Otherwise, appends "\n\nRegards,\n<agentName>".
+ */
+export function ensureAgentSignOff(text: string, agentName?: string): string {
+  const name = agentName?.trim();
+  if (!name) {
+    return text.trim();
+  }
+
+  let result = text.trim();
+
+  // 1. Replace placeholder tokens like [Agent Name], [Your Name], [Name], [Support Agent], [Agent]
+  const placeholderRegex = /\[(?:Agent Name|Your Name|Name|Support Agent|Agent)\]/gi;
+  result = result.replace(placeholderRegex, name);
+
+  // 2. Check if the text already ends with a sign-off mentioning the agent's name
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existingSignOffRegex = new RegExp(
+    `(?:regards|best regards|warm regards|kind regards|sincerely|cheers|thanks)[,\\s\\n]+${escapedName}\\s*$`,
+    "i"
+  );
+
+  if (existingSignOffRegex.test(result)) {
+    return result;
+  }
+
+  // 3. Check if it ends with "Regards," or similar sign-off without the name following
+  const trailingRegardsRegex = /(?:regards|best regards|warm regards|kind regards|sincerely)[,\s]*$/i;
+  if (trailingRegardsRegex.test(result)) {
+    return result.replace(trailingRegardsRegex, `Regards,\n${name}`);
+  }
+
+  // 4. Append standard sign-off
+  return `${result}\n\nRegards,\n${name}`;
+}
+
+/**
+ * Extracts a capitalized first name from a full name, display name, or title.
+ * E.g.:
+ * - "John Doe" -> "John"
+ * - "alice smith" -> "Alice"
+ * - "Dr. Gregory House" -> "Gregory"
+ * - "jane-marie" -> "Jane-Marie"
+ */
+export function extractFirstName(name?: string | null): string {
+  if (!name || !name.trim()) return "";
+  const trimmed = name.trim();
+  const parts = trimmed.split(/\s+/);
+  const titles = new Set([
+    "mr", "mr.", "mrs", "mrs.", "ms", "ms.", "miss", "dr", "dr.", "prof", "prof."
+  ]);
+  let first = parts[0];
+  if (parts.length > 1 && titles.has(parts[0].toLowerCase())) {
+    first = parts[1];
+  }
+  first = first.replace(/[^a-zA-Z0-9'-]/g, "");
+  if (!first) return "";
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
+
+/**
+ * Ensures the polished reply begins with a customer greeting addressing their first name:
+ * "Dear <cust_first_name>,"
+ * - Replaces any bracket placeholders like [Customer Name] or [First Name].
+ * - If an existing greeting like "Hi John," or "Dear John," or "Hello," is present, normalizes to "Dear <cust_first_name>,\n\n".
+ * - If no greeting is present, prepends "Dear <cust_first_name>,\n\n".
+ */
+export function ensureCustomerGreeting(text: string, customerFirstName?: string): string {
+  const firstName = customerFirstName?.trim();
+  if (!firstName) {
+    return text.trim();
+  }
+
+  let result = text.trim();
+
+  // 1. Replace placeholder tokens like [Customer Name], [Customer First Name], [First Name], [Customer]
+  const placeholderRegex = /\[(?:Customer Name|Customer First Name|First Name|Customer|Client Name)\]/gi;
+  result = result.replace(placeholderRegex, firstName);
+
+  // 2. If it starts with any greeting like "Dear ...", "Hi ...", "Hello ...", "Hey ...", "Greetings ..."
+  const genericGreetingRegex = /^(?:dear|hi|hello|hey|greetings)\b[^\n,:]*[,:]?\s*/i;
+  if (genericGreetingRegex.test(result)) {
+    const bodyAfterGreeting = result.replace(genericGreetingRegex, "").trimStart();
+    return `Dear ${firstName},\n\n${bodyAfterGreeting}`;
+  }
+
+  // 3. If no greeting was present at all, prepend "Dear <firstName>,\n\n"
+  return `Dear ${firstName},\n\n${result}`;
+}
+
