@@ -1042,6 +1042,35 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 37: Comprehensive Unit Testing for AI Polish & Summarization
+- **Feature & Testing Scope**:
+  - Authored comprehensive unit test suites covering all layers of the AI polish and summarization functionality across server and client.
+- **Backend Unit Tests (`server/src/features/tickets/__tests__/`)**:
+  - [`ticket-polish.service.test.ts`](file:///E:/mosh%20Hamedani%20course/helpdesk/server/src/features/tickets/__tests__/ticket-polish.service.test.ts):
+    - `polishReply`: Empty draft validation, prompt context injection (subject, body, agentName, customerName), greeting normalization, model failure handling (502 error mapping), and missing API key rejection.
+    - `summarizeTicket`: Non-existent ticket handling (404), conversation history mapping (Customer, Agent, AI Assistant), empty replies fallback, AI generation failure handling (502), and markdown symbol stripping.
+  - [`ticket-ai.controller.test.ts`](file:///E:/mosh%20Hamedani%20course/helpdesk/server/src/features/tickets/__tests__/ticket-ai.controller.test.ts) (New):
+    - Tested `ticketController.polishReply` for 200 success with/without ticketId, 400 invalid ticketId param, 400 validation error on empty payload, agentName precedence (body over session), customerName forwarding, TicketServiceError status mapping, and 500 unexpected exception handling.
+    - Tested `ticketController.summarizeTicket` for 200 success, 400 invalid param, 404 not found, 502 AI failure, and 500 error handling.
+  - [`ticket.utils.test.ts`](file:///E:/mosh%20Hamedani%20course/helpdesk/server/src/features/tickets/__tests__/ticket.utils.test.ts):
+    - Thorough unit tests for `cleanSummaryText`, `ensureAgentSignOff`, `extractFirstName`, and `ensureCustomerGreeting`.
+  - [`ticket.schema.test.ts`](file:///E:/mosh%20Hamedani%20course/helpdesk/server/src/features/tickets/__tests__/ticket.schema.test.ts):
+    - Validation tests for `polishReplySchema` accepting `text`, `body`, `draft`, `agentName`, and `customerName`.
+- **Frontend Unit Tests (`client/src/features/tickets/`)**:
+  - [`tickets-ai.api.test.ts`](file:///E:/mosh%20Hamedani%20course/helpdesk/client/src/features/tickets/api/__tests__/tickets-ai.api.test.ts) (New):
+    - Unit tests for `polishTicketReply` verifying endpoint URLs with/without ticketId, payload formatting (text, agentName, customerName), return value extraction, and error rejection.
+    - Unit tests for `summarizeTicket` verifying endpoint invocation, summary return, and error propagation.
+  - [`TicketReplyForm.test.tsx`](file:///E:/mosh%20Hamedani%20course/helpdesk/client/src/features/tickets/__tests__/TicketReplyForm.test.tsx):
+    - Component unit tests for polish button rendering, validation on empty draft, loading spinner/disabled states, error alert rendering, session agentName forwarding, and customerName forwarding.
+  - [`TicketDetails.test.tsx`](file:///E:/mosh%20Hamedani%20course/helpdesk/client/src/features/tickets/__tests__/TicketDetails.test.tsx):
+    - Component unit tests for summarize button, API triggering, summary rendering, continuous re-generation on each click, and error alert states.
+- **Verification**:
+  - Server Unit Tests (`bun test`): **176 / 176 passed** across 11 files.
+  - Client Unit Tests (`bun run test:unit`): **149 / 149 passed** across 19 files.
+  - Production Builds: Both server (`tsc`) and client (`tsc -b && vite build`) compile with 0 errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -1081,7 +1110,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   │   │   ├── __tests__/   # 7 unit/integration test suites
 │   │   │   │   └── index.ts     # Users barrel export
 │   │   │   └── tickets/         # Tickets feature module
-│   │   │       ├── api/         # tickets.api.ts (getTickets, getTicketById, updateTicket, assignTicket, createReply, polishTicketReply, summarizeTicket)
+│   │   │       ├── api/         # tickets.api.ts, __tests__/tickets-ai.api.test.ts
 │   │   │       ├── components/  # TicketDetails, UpdateTicket, TicketDetailSkeleton, BackToTicketsButton, TicketRepliesThread, TicketReplyForm, TicketStatusBadge, TicketPriorityBadge, TicketCategoryBadge, TicketStatsCards, TicketsFilter, TicketsTable
 │   │   │       ├── hooks/       # useTickets, useTicket, useAssignTicket, useUpdateTicket, useCreateReply, usePolishReply, useSummarizeTicket
 │   │   │       ├── pages/       # TicketsPage.tsx, TicketDetailPage.tsx
@@ -1117,7 +1146,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │   │   ├── features/            # Feature-based domain modules
 │   │   │   ├── auth/            # Auth feature: auth.ts, auth.middleware.ts
 │   │   │   ├── users/           # Users feature: routes, controller, service, schema, types
-│   │   │   └── tickets/         # Tickets feature: routes, controller, services (CRUD, AI polish/summarize, ingest), schema, types, utils, __tests__
+│   │   │   └── tickets/         # Tickets feature: routes, controller, services (CRUD, AI polish/summarize, ingest), schema, types, utils, __tests__ (ticket-ai.controller, ticket-polish.service, ticket.utils, ticket.schema, ticket.service, ticket-ingest.service)
 │   │   ├── middleware/          # Backward-compatibility auth.middleware.ts
 │   │   ├── routes/              # Backward-compatibility admin.routes.ts & user.routes.ts
 │   │   ├── controllers/         # Backward-compatibility user.controller.ts

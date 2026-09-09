@@ -133,6 +133,37 @@ describe("ticketService.polishReply", () => {
       (prisma.ticket as any).findUnique = originalFindUnique;
     }
   });
+
+  it("normalizes an informal opening greeting to Dear <cust_first_name>,", async () => {
+    mockGenerateText = mock(async () => ({
+      text: "Hi John,\n\nWe have reset your account credentials.",
+    }));
+
+    const result = await ticketService.polishReply(
+      null,
+      "reset creds",
+      "Agent Smith",
+      "John Doe"
+    );
+    expect(result).toBe(
+      "Dear John,\n\nWe have reset your account credentials.\n\nRegards,\nAgent Smith"
+    );
+  });
+
+  it("throws TicketServiceError with 502 when generateText fails during polish", async () => {
+    mockGenerateText = mock(async () => {
+      throw new Error("OpenAI API rate limit exceeded");
+    });
+
+    try {
+      await ticketService.polishReply(null, "draft reply text", "Agent");
+      expect(true).toBe(false); // should not reach here
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(502);
+      expect(err.message).toContain("AI Polish failed: OpenAI API rate limit exceeded");
+    }
+  });
 });
 
 describe("ticketService.summarizeTicket", () => {
@@ -194,6 +225,107 @@ describe("ticketService.summarizeTicket", () => {
       expect(capturedOptions.prompt).toContain("Please update your build command.");
       expect(capturedOptions.prompt).toContain("Customer (Dev Dave)");
       expect(capturedOptions.prompt).toContain("That solved it, thank you!");
+    } finally {
+      (prisma.ticket as any).findUnique = originalFindUnique;
+    }
+  });
+
+  it("summarizes ticket with no replies using fallback inquiry text", async () => {
+    let capturedOptions: any = null;
+    mockGenerateText = mock(async (options: any) => {
+      capturedOptions = options;
+      return {
+        text: "Customer inquired about course discount. Status is Open.",
+      };
+    });
+
+    const originalFindUnique = prisma.ticket.findUnique;
+    (prisma.ticket as any).findUnique = mock(async () => ({
+      id: 77,
+      subject: "Discount Inquiry",
+      body: "Is there a student discount available?",
+      senderName: "Eve Student",
+      senderEmail: "eve@example.com",
+      priority: "LOW",
+      status: "OPEN",
+      createdAt: new Date("2026-09-08T11:00:00Z"),
+      replies: [],
+    }));
+
+    try {
+      const summary = await ticketService.summarizeTicket(77);
+      expect(summary).toBe("Customer inquired about course discount. Status is Open.");
+      expect(capturedOptions.prompt).toContain("(No replies in conversation yet.)");
+    } finally {
+      (prisma.ticket as any).findUnique = originalFindUnique;
+    }
+  });
+
+  it("maps AI assistant author type correctly in conversation history", async () => {
+    let capturedOptions: any = null;
+    mockGenerateText = mock(async (options: any) => {
+      capturedOptions = options;
+      return {
+        text: "AI provided initial troubleshooting steps. Customer acknowledged.",
+      };
+    });
+
+    const originalFindUnique = prisma.ticket.findUnique;
+    (prisma.ticket as any).findUnique = mock(async () => ({
+      id: 88,
+      subject: "Password Reset",
+      body: "Cannot reset my password",
+      senderName: "Frank User",
+      senderEmail: "frank@example.com",
+      priority: "MEDIUM",
+      status: "OPEN",
+      createdAt: new Date("2026-09-08T12:00:00Z"),
+      replies: [
+        {
+          id: 1,
+          senderType: "AI",
+          body: "Please click the forgot password link.",
+          createdAt: new Date("2026-09-08T12:01:00Z"),
+          user: null,
+        },
+      ],
+    }));
+
+    try {
+      const summary = await ticketService.summarizeTicket(88);
+      expect(summary).toBe("AI provided initial troubleshooting steps. Customer acknowledged.");
+      expect(capturedOptions.prompt).toContain("by AI Assistant");
+      expect(capturedOptions.prompt).toContain("Please click the forgot password link.");
+    } finally {
+      (prisma.ticket as any).findUnique = originalFindUnique;
+    }
+  });
+
+  it("throws TicketServiceError with 502 when generateText fails during summarize", async () => {
+    mockGenerateText = mock(async () => {
+      throw new Error("AI service connection timeout");
+    });
+
+    const originalFindUnique = prisma.ticket.findUnique;
+    (prisma.ticket as any).findUnique = mock(async () => ({
+      id: 99,
+      subject: "Test Subject",
+      body: "Test Body",
+      senderName: "User",
+      senderEmail: "user@example.com",
+      priority: "LOW",
+      status: "OPEN",
+      createdAt: new Date(),
+      replies: [],
+    }));
+
+    try {
+      await ticketService.summarizeTicket(99);
+      expect(true).toBe(false);
+    } catch (err: any) {
+      expect(err).toBeInstanceOf(TicketServiceError);
+      expect(err.statusCode).toBe(502);
+      expect(err.message).toContain("AI service connection timeout");
     } finally {
       (prisma.ticket as any).findUnique = originalFindUnique;
     }
