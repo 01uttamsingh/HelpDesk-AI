@@ -48,30 +48,30 @@ export function UsersPage() {
   const agentCount = users.filter((u) => u.role?.toUpperCase() === "AGENT").length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
               <Users className="h-5 w-5" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Users
             </h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Manage platform users, roles, and administrative permissions.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <Button
             variant="outline"
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="gap-2"
+            className="gap-2 text-xs sm:text-sm"
           >
             <RefreshCw
               className={`h-4 w-4 ${isFetching ? "animate-spin text-muted-foreground" : ""}`}
@@ -82,7 +82,7 @@ export function UsersPage() {
           <Button
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
-            className="gap-2"
+            className="gap-2 text-xs sm:text-sm"
             data-testid="create-user-button"
           >
             <UserPlus className="h-4 w-4" />

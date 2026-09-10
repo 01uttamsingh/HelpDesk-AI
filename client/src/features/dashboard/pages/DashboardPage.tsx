@@ -28,12 +28,12 @@ export function DashboardPage() {
   const { stats, isLoading, isFetching, error, refetch } = useDashboardStats();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6" data-testid="dashboard-page">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6" data-testid="dashboard-page">
       {/* Top Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
               <LayoutDashboard className="h-5 w-5" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -51,19 +51,19 @@ export function DashboardPage() {
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Welcome back, <strong className="font-semibold text-foreground">{user?.name || "User"}</strong>! Here is your real-time support overview.
           </p>
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           {isAdmin && (
-            <div className="flex rounded-lg bg-muted/60 p-1 border border-border">
+            <div className="flex rounded-lg bg-muted/60 p-1 border border-border flex-1 sm:flex-initial justify-center">
               <button
                 type="button"
                 onClick={() => setAdminViewTab("overview")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                className={`inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-initial px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                   adminViewTab === "overview"
                     ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
@@ -76,7 +76,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setAdminViewTab("assigned")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                className={`inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-initial px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                   adminViewTab === "assigned"
                     ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
@@ -95,7 +95,7 @@ export function DashboardPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="gap-1.5 text-xs h-9"
+            className="gap-1.5 text-xs h-9 shrink-0"
             data-testid="refresh-dashboard-button"
           >
             <RefreshCw className={`h-3.5 w-3.5 text-muted-foreground ${isFetching ? "animate-spin" : ""}`} />

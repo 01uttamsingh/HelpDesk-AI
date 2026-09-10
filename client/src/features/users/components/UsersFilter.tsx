@@ -24,23 +24,23 @@ export function UsersFilter({
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       {/* Search Input */}
-      <div className="relative flex-1 max-w-md">
+      <div className="relative flex-1 w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
           type="search"
           placeholder="Search users by name or email..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9"
+          className="pl-9 w-full"
         />
       </div>
 
       {/* Role Filters */}
-      <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/60 border border-border self-start sm:self-auto">
+      <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/60 border border-border w-full sm:w-fit overflow-x-auto max-w-full">
         <button
           type="button"
           onClick={() => onRoleFilterChange("ALL")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             roleFilter === "ALL"
               ? "bg-card text-foreground shadow-xs border border-border"
               : "text-muted-foreground hover:text-foreground"
@@ -51,7 +51,7 @@ export function UsersFilter({
         <button
           type="button"
           onClick={() => onRoleFilterChange("ADMIN")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             roleFilter === "ADMIN"
               ? "bg-card text-foreground shadow-xs border border-border"
               : "text-muted-foreground hover:text-foreground"
@@ -62,7 +62,7 @@ export function UsersFilter({
         <button
           type="button"
           onClick={() => onRoleFilterChange("AGENT")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             roleFilter === "AGENT"
               ? "bg-card text-foreground shadow-xs border border-border"
               : "text-muted-foreground hover:text-foreground"

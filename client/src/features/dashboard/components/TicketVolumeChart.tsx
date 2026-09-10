@@ -60,7 +60,7 @@ export function TicketVolumeChart({ data = [], isLoading = false }: TicketVolume
 
   return (
     <Card className="border-border bg-card shadow-xs" data-testid="ticket-volume-chart">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2">
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-primary" />
@@ -72,7 +72,7 @@ export function TicketVolumeChart({ data = [], isLoading = false }: TicketVolume
         </div>
 
         {/* Summary Chips */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 text-xs font-medium text-foreground border border-border">
             <Calendar className="h-3 w-3 text-muted-foreground" />
             <span>Total: <strong className="font-semibold">{totalIn30Days}</strong></span>
@@ -92,10 +92,10 @@ export function TicketVolumeChart({ data = [], isLoading = false }: TicketVolume
         </div>
       </CardHeader>
 
-      <CardContent className="pt-4">
+      <CardContent className="pt-2 sm:pt-4 px-2 sm:px-6">
         {isLoading ? (
-          <div className="h-[260px] w-full flex flex-col justify-end space-y-2">
-            <Skeleton className="h-[220px] w-full rounded-md" />
+          <div className="h-[220px] sm:h-[260px] w-full flex flex-col justify-end space-y-2">
+            <Skeleton className="h-[180px] sm:h-[220px] w-full rounded-md" />
             <div className="flex justify-between">
               <Skeleton className="h-3 w-16" />
               <Skeleton className="h-3 w-16" />
@@ -103,7 +103,7 @@ export function TicketVolumeChart({ data = [], isLoading = false }: TicketVolume
             </div>
           </div>
         ) : (
-          <div className="h-[260px] w-full" data-testid="chart-container">
+          <div className="h-[220px] sm:h-[260px] w-full" data-testid="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={data}

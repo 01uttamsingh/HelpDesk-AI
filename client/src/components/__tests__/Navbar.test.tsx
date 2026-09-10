@@ -95,4 +95,98 @@ describe("Navbar Navigation Highlighting", () => {
     expect(usersLink.className).toContain("text-foreground");
     expect(usersLink.className).toContain("font-bold");
   });
+
+  it("toggles navigation drawer when clicking hamburger button", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    // Navigation drawer is initially closed
+    expect(screen.queryByTestId("navbar-mobile-menu")).not.toBeInTheDocument();
+
+    // Click hamburger button to open menu
+    const mobileToggle = screen.getByTestId("navbar-mobile-toggle");
+    // Ensure toggle is not restricted by md:hidden
+    expect(mobileToggle.className).not.toContain("md:hidden");
+    await user.click(mobileToggle);
+
+    expect(screen.getByTestId("navbar-mobile-menu")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-nav-dashboard-link")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-nav-tickets-link")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-nav-users-link")).toBeInTheDocument();
+
+    // Click again to close
+    await user.click(mobileToggle);
+    expect(screen.queryByTestId("navbar-mobile-menu")).not.toBeInTheDocument();
+  });
+
+  it("renders the profile name with user icon on the right side", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const userProfile = screen.getByTestId("navbar-user-profile");
+    expect(userProfile).toBeInTheDocument();
+    expect(userProfile).toHaveTextContent("Alice Admin");
+  });
+
+  it("opens proper full-height left-side drawer with signout button and handles sign out", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    // Open drawer
+    const mobileToggle = screen.getByTestId("navbar-mobile-toggle");
+    await user.click(mobileToggle);
+
+    // Check drawer container, full-height and responsive width styling
+    const drawer = screen.getByTestId("navbar-mobile-drawer");
+    expect(drawer).toBeInTheDocument();
+    expect(drawer.className).toContain("left-0");
+    expect(drawer.className).toContain("h-screen");
+    expect(drawer.className).toContain("w-72");
+
+    // Check sign out button inside the drawer
+    const drawerSignOutBtn = screen.getByTestId("drawer-sign-out-button");
+    expect(drawerSignOutBtn).toBeInTheDocument();
+    expect(drawerSignOutBtn).toHaveTextContent(/sign out/i);
+    expect(drawerSignOutBtn.className).toContain("self-start");
+
+    // Click sign out button in drawer
+    await user.click(drawerSignOutBtn);
+    expect(authModule.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the drawer when clicking the close button or backdrop", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const mobileToggle = screen.getByTestId("navbar-mobile-toggle");
+    await user.click(mobileToggle);
+    expect(screen.getByTestId("navbar-mobile-menu")).toBeInTheDocument();
+
+    // Click close button inside drawer
+    const closeBtn = screen.getByTestId("navbar-mobile-close");
+    await user.click(closeBtn);
+    expect(screen.queryByTestId("navbar-mobile-menu")).not.toBeInTheDocument();
+
+    // Open again and click backdrop
+    await user.click(mobileToggle);
+    expect(screen.getByTestId("navbar-mobile-menu")).toBeInTheDocument();
+    const backdrop = screen.getByTestId("navbar-mobile-backdrop");
+    await user.click(backdrop);
+    expect(screen.queryByTestId("navbar-mobile-menu")).not.toBeInTheDocument();
+  });
 });

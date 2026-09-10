@@ -19,7 +19,7 @@ export function AgentDashboardStats({ stats, isLoading = false }: AgentDashboard
   return (
     <div className="space-y-4" data-testid="agent-stats-cards">
       {/* 5 Workload & Queue KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* 1. Total Open Tickets (Team Queue) */}
         <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="agent-total-open">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">

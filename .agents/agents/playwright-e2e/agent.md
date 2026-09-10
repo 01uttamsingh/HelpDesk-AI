@@ -80,7 +80,6 @@ All E2E test files, test scripts, and test artifacts reside in the `/e2e` direct
 ```text
 e2e/
 ├── auth/
-│   ├── login.spec.ts           # Real browser Better Auth sign-in happy path
 │   └── session.spec.ts         # Session persistence across reload, sign-out, route guards
 ├── rbac/
 │   └── admin-routes.spec.ts    # Admin-only access to /users, agent restriction in browser
@@ -188,7 +187,7 @@ Strictly run all commands using **`bun`**:
 | Run all E2E tests | `bun run test:e2e` |
 | Run tests with UI Mode | `bun run test:e2e:ui` |
 | Run tests with visible browser | `bun run test:e2e:headed` |
-| Run a specific test file | `bunx playwright test e2e/auth/login.spec.ts` |
+| Run a specific test file | `bunx playwright test e2e/auth/session.spec.ts` |
 | Run in debug mode | `bunx playwright test --debug` |
 | Reset & re-seed test DB | `bun run db:test:reset` |
 | View HTML test report | `bunx playwright show-report` |

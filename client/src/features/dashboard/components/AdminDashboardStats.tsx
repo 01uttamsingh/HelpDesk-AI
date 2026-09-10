@@ -22,7 +22,7 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
   return (
     <div className="space-y-4" data-testid="admin-stats-cards">
       {/* 5 Core Management KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* 1. Total Tickets */}
         <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="admin-total-tickets">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -151,7 +151,7 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
       </div>
 
       {/* Secondary Status Breakdown Bar */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">

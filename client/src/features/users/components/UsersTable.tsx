@@ -37,22 +37,22 @@ export function UsersTable({
         <table className="w-full text-left text-sm" data-testid="users-table">
           <thead className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <tr>
-              <th scope="col" className="px-6 py-3.5">
+              <th scope="col" className="px-3 sm:px-6 py-3 sm:py-3.5">
                 User
               </th>
-              <th scope="col" className="px-6 py-3.5">
+              <th scope="col" className="px-3 sm:px-6 py-3 sm:py-3.5">
                 Email
               </th>
-              <th scope="col" className="px-6 py-3.5">
+              <th scope="col" className="px-3 sm:px-6 py-3 sm:py-3.5">
                 Role
               </th>
-              <th scope="col" className="px-6 py-3.5">
+              <th scope="col" className="px-3 sm:px-6 py-3 sm:py-3.5">
                 Email Status
               </th>
-              <th scope="col" className="px-6 py-3.5">
+              <th scope="col" className="px-3 sm:px-6 py-3 sm:py-3.5">
                 Joined
               </th>
-              <th scope="col" className="px-6 py-3.5 text-right">
+              <th scope="col" className="px-3 sm:px-6 py-3 sm:py-3.5 text-right">
                 Actions
               </th>
             </tr>
@@ -62,25 +62,25 @@ export function UsersTable({
               // Loading Skeleton Rows
               Array.from({ length: 4 }).map((_, idx) => (
                 <tr key={idx}>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     <div className="flex items-center gap-3">
                       <Skeleton className="h-9 w-9 rounded-full" />
                       <Skeleton className="h-4 w-28" />
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     <Skeleton className="h-4 w-36" />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     <Skeleton className="h-5 w-16" />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     <Skeleton className="h-5 w-20" />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     <Skeleton className="h-4 w-24" />
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
                     <Skeleton className="h-7 w-7 rounded-md ml-auto" />
                   </td>
                 </tr>
@@ -130,10 +130,10 @@ export function UsersTable({
                     className="hover:bg-muted/30 transition-colors"
                   >
                     {/* Name & Avatar */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
                         <div
-                          className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold shadow-xs ${
+                          className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xs font-bold shadow-xs shrink-0 ${
                             isAdmin
                               ? "bg-purple-600 text-white"
                               : "bg-blue-600 text-white"
@@ -150,15 +150,15 @@ export function UsersTable({
                     </td>
 
                     {/* Email */}
-                    <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-muted-foreground">
                       <div className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground/70" />
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
                         <span>{user.email}</span>
                       </div>
                     </td>
 
                     {/* Role */}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       {isAdmin ? (
                         <Badge variant="admin" className="gap-1">
                           <Shield className="h-3 w-3" />
@@ -173,7 +173,7 @@ export function UsersTable({
                     </td>
 
                     {/* Email Verification Status */}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       {user.emailVerified ? (
                         <Badge variant="success" className="gap-1">
                           <CheckCircle2 className="h-3 w-3" />
@@ -188,15 +188,15 @@ export function UsersTable({
                     </td>
 
                     {/* Joined Date */}
-                    <td className="px-6 py-4 whitespace-nowrap text-muted-foreground text-xs">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-muted-foreground text-xs">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/70" />
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
                         <span>{joinedDate}</span>
                       </div>
                     </td>
 
                     {/* Actions */}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"

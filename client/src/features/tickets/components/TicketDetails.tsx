@@ -68,7 +68,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
         </div>
 
         <h1
-          className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground"
+          className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground break-words"
           data-testid="ticket-detail-subject"
         >
           {ticket.subject}
@@ -77,38 +77,38 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
 
       {/* Main Content (Customer Inquiry / Message) */}
       <Card data-testid="ticket-message-card">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm border border-primary/20">
-              {ticket.senderName ? ticket.senderName.charAt(0).toUpperCase() : <User className="h-5 w-5" />}
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm border border-primary/20">
+              {ticket.senderName ? ticket.senderName.charAt(0).toUpperCase() : <User className="h-4 w-4 sm:h-5 sm:w-5" />}
             </div>
-            <div>
-              <div className="font-semibold text-foreground text-sm" data-testid="ticket-sender-name">
+            <div className="min-w-0">
+              <div className="font-semibold text-foreground text-sm truncate" data-testid="ticket-sender-name">
                 {ticket.senderName}
               </div>
               <a
                 href={`mailto:${ticket.senderEmail}`}
-                className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 break-all"
                 data-testid="ticket-sender-email"
               >
-                <Mail className="h-3 w-3" />
-                {ticket.senderEmail}
+                <Mail className="h-3 w-3 shrink-0" />
+                <span className="truncate">{ticket.senderEmail}</span>
               </a>
             </div>
           </div>
 
           <div
-            className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap self-start sm:self-auto"
             data-testid="ticket-detail-timestamp"
           >
-            <Clock className="h-3.5 w-3.5" />
+            <Clock className="h-3.5 w-3.5 shrink-0" />
             <time dateTime={ticket.createdAt}>{formatDate(ticket.createdAt)}</time>
           </div>
         </CardHeader>
 
-        <CardContent className="pt-6 space-y-4">
+        <CardContent className="p-4 sm:p-6 pt-4 sm:pt-6 space-y-4">
           <div
-            className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-sans break-words"
+            className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-sans break-words overflow-hidden"
             data-testid="ticket-detail-body"
             dangerouslySetInnerHTML={{
               __html: DOMPurify.sanitize(ticket.body || ""),
@@ -117,7 +117,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
 
           {/* Below the message: Summarize Button & Summary Display */}
           <div className="pt-4 border-t border-border/60 space-y-3" data-testid="ticket-summary-section">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Button
                 type="button"
                 variant="outline"

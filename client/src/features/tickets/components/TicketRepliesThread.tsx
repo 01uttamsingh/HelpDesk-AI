@@ -69,10 +69,10 @@ export function TicketRepliesThread({
                     : "border-border/80 bg-muted/20 shadow-xs"
                 }
               >
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
-                  <div className="flex items-center gap-3">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 p-3.5 sm:p-6 pb-2.5 sm:pb-3 border-b border-border/60">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold text-xs border ${
+                      className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full font-semibold text-xs border ${
                         isAgent
                           ? "bg-primary/10 text-primary border-primary/20"
                           : isAi
@@ -83,10 +83,10 @@ export function TicketRepliesThread({
                       {isAi ? <Bot className="h-4 w-4" /> : isCustomer ? <User className="h-4 w-4" /> : initial}
                     </div>
 
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span
-                          className="font-semibold text-foreground text-sm"
+                          className="font-semibold text-foreground text-sm truncate"
                           data-testid={`reply-author-${reply.id}`}
                         >
                           {authorName}
@@ -124,7 +124,7 @@ export function TicketRepliesThread({
                       </div>
 
                       {authorEmail && (
-                        <span className="text-xs text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block truncate">
                           {authorEmail}
                         </span>
                       )}
@@ -132,7 +132,7 @@ export function TicketRepliesThread({
                   </div>
 
                   <div
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap self-start sm:self-auto shrink-0"
                     data-testid={`reply-timestamp-${reply.id}`}
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -142,7 +142,7 @@ export function TicketRepliesThread({
                   </div>
                 </CardHeader>
 
-                <CardContent className="pt-4">
+                <CardContent className="p-3.5 sm:p-6 pt-3.5 sm:pt-4">
                   <div
                     className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-sans break-words"
                     data-testid={`reply-body-${reply.id}`}

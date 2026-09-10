@@ -179,7 +179,7 @@ export function TicketsTable({
                     <th
                       key={header.id}
                       scope="col"
-                      className="py-3 px-4"
+                      className="py-3 px-3 sm:px-4"
                     >
                       {header.isPlaceholder ? null : canSort ? (
                         <button
@@ -276,7 +276,7 @@ export function TicketsTable({
                       return (
                         <td
                           key={cell.id}
-                          className={`py-3 px-4 ${
+                          className={`py-3 px-3 sm:px-4 ${
                             isSubject ? "" : "whitespace-nowrap"
                           }`}
                         >
@@ -332,11 +332,11 @@ export function TicketsTable({
       {/* Pagination Footer */}
       {pagination && (
         <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-3.5 border-t border-border bg-card text-xs text-muted-foreground"
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-3 sm:px-6 py-3 sm:py-3.5 border-t border-border bg-card text-xs text-muted-foreground"
           data-testid="tickets-pagination"
         >
           {/* Items Range Info */}
-          <div className="flex items-center gap-1.5" data-testid="pagination-info">
+          <div className="flex items-center gap-1.5 text-center sm:text-left" data-testid="pagination-info">
             {pagination.totalCount === 0 ? (
               <span>Showing 0 of 0 tickets</span>
             ) : (
@@ -358,10 +358,10 @@ export function TicketsTable({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-4">
             {/* Page Size Selector */}
             {onPageSizeChange && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <span>Per page:</span>
                 <select
                   value={pagination.pageSize}

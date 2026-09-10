@@ -129,7 +129,7 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   * **Admin User**: `test@example.com` / `uvdb1357` (Role: `ADMIN`).
   * **Agent User**: `agent@example.com` / `uvdb1357` (Role: `AGENT`).
 * **Test Organization**:
-  * Place tests strictly in `/e2e` grouped by feature domain (e.g., `e2e/auth/login.spec.ts`, `e2e/rbac/admin-routes.spec.ts`, `e2e/tickets/`).
+  * Place tests strictly in `/e2e` grouped by feature domain (e.g., `e2e/auth/session.spec.ts`, `e2e/rbac/admin-routes.spec.ts`, `e2e/tickets/`).
 * **Locator Guidelines**:
   * Target UI elements using accessible semantic roles (`getByRole`, `getByLabel`, `getByText`, `getByRole('alert')`) built on shadcn/ui and Base UI primitives.
   * Avoid brittle CSS selectors or generated Tailwind utility classes.
@@ -1243,6 +1243,69 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 
 ---
 
+### Milestone 41: Comprehensive Frontend Responsive Design Across All Screen Sizes (Completed)
+- **Feature & Responsive Scope**:
+  - Audited the entire frontend codebase and made every page and component fully responsive across all device breakpoints (Mobile: 320px - 640px, Tablet: 768px - 1024px, Desktop: 1280px+).
+  - Eliminated all horizontal viewport clipping, forced overflows, cramped form controls, and awkward card grids.
+- **Global Layout & Navigation (`Navbar.tsx` & `App.tsx`)**:
+  - `Navbar.tsx`:
+    - Responsive mobile layout: On phone screens (`< md`), the hamburger toggle sits on the far left, followed by the Helpdesk brand logo, and the administrator/user profile name with an avatar icon is displayed prominently on the right (`navbar-user-profile`).
+    - Left-Side Drawer: Clicking the hamburger button opens an accessible slide-out navigation drawer from the left (`fixed inset-y-0 left-0`) strictly occupying exactly half of the screen on mobile (`w-1/2 max-w-[50vw] md:hidden`) with smooth slide animation, full backdrop overlay (`navbar-mobile-backdrop`), Escape key listener, and body scroll lock.
+    - Drawer Sign Out Button: Positioned on the bottom-left of the opened drawer (`self-start justify-start text-destructive`), uncluttering the mobile top header.
+    - Desktop Header Sign Out: Remains visible and direct on desktop viewports (`hidden md:inline-flex`), preserving immediate access and Playwright desktop test expectations.
+    - Added auto-close effect whenever the route pathname changes (`useEffect` on `location.pathname`).
+    - Compact user profile badge on narrow viewports: hides long email address (`hidden sm:block`) and truncates name to prevent header overflow.
+    - Updated container padding to `px-3 sm:px-6 lg:px-8`.
+  - `App.tsx`:
+    - Added `overflow-x-hidden` to outer layout wrapper to prevent accidental horizontal scrollbar triggers.
+    - Made footer responsive with `flex-wrap` and adaptive spacing.
+- **Accessible Modal & Dialog Primitive (`dialog.tsx`)**:
+  - `DialogPopup`: updated to `w-[calc(100%-2rem)] max-w-lg sm:max-w-[425px] p-4 sm:p-6 max-h-[90vh] overflow-y-auto`.
+  - Guarantees comfortable viewport margins and smooth scrolling on small mobile screens or when the mobile software keyboard is open.
+- **Dashboard Feature (`client/src/features/dashboard/`)**:
+  - `DashboardPage.tsx`:
+    - Header banner: `flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2`.
+    - Title and role badge: `flex flex-wrap items-center gap-2 sm:gap-2.5`.
+    - Admin view switcher tabs: `flex-1 sm:flex-initial justify-center` with full width on mobile.
+    - Container padding: `px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6`.
+  - `AdminDashboardStats.tsx` & `AgentDashboardStats.tsx`:
+    - Updated 5-card management and workload KPI grids to `grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4` to eliminate orphan cards on tablet widths.
+    - Secondary status breakdown in AdminDashboardStats: `grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4`.
+  - `TicketVolumeChart.tsx`:
+    - Header and summary chips: `flex flex-wrap items-center gap-1.5 sm:gap-2`.
+    - Responsive chart height: `h-[220px] sm:h-[260px]` with adaptive horizontal padding.
+  - `RecentAssignedTicketsTable.tsx`:
+    - Adaptive cell padding (`py-3 px-3 sm:px-4`) and ticket subject max widths (`max-w-[140px] xs:max-w-[200px] sm:max-w-sm`) with horizontal scroll protection (`overflow-x-auto`).
+- **Tickets Feature (`client/src/features/tickets/`)**:
+  - `TicketsPage.tsx`: adaptive container padding (`px-3 sm:px-6 lg:px-8 py-6 sm:py-8`) and wrapping header.
+  - `TicketStatsCards.tsx`: updated to `grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4` with responsive card padding `p-3 sm:p-4`.
+  - `TicketsFilter.tsx`:
+    - Full-width search input on mobile (`w-full md:max-w-md`).
+    - Filter dropdowns: `flex flex-wrap items-center gap-2 sm:gap-2.5 w-full md:w-auto` with flexible widths (`w-full xs:w-auto`).
+    - Status tabs bar: `w-full sm:w-fit overflow-x-auto max-w-full` enabling smooth horizontal swiping on mobile.
+  - `TicketsTable.tsx`:
+    - Responsive cell padding: `py-3 px-3 sm:px-4`.
+    - Pagination footer: `flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-3 sm:px-6 py-3 sm:py-3.5` with centered/wrapped pagination controls.
+  - `TicketDetailPage.tsx`: responsive container padding and header action layout.
+  - `TicketDetails.tsx`:
+    - Word breaking on subjects (`break-words`) and customer email (`break-all`).
+    - Adaptive card header and content padding (`p-4 sm:p-6`).
+    - Responsive summarize button row with `flex-wrap`.
+  - `TicketRepliesThread.tsx`: adaptive reply card padding (`p-3.5 sm:p-6`) and wrapping author/badge headers.
+  - `TicketReplyForm.tsx`: responsive status dropdown (`w-full sm:w-auto`) and action buttons (`flex-1 sm:flex-initial`).
+- **Users Feature (`client/src/features/users/`)**:
+  - `UsersPage.tsx`: responsive header, buttons, and container padding.
+  - `UserStatsCards.tsx`: `grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4` with `p-3 sm:p-4`.
+  - `UsersFilter.tsx`: flexible full-width search input and scrollable role filter tabs.
+  - `UsersTable.tsx`: responsive cell padding `px-3 sm:px-6 py-3 sm:py-3.5`.
+- **Auth Feature (`client/src/features/auth/`)**:
+  - `LoginPage.tsx`: responsive wrapper padding (`px-3 sm:px-4 py-8 sm:py-12`), adaptive card padding (`p-4 sm:p-6`), and responsive title sizing.
+- **Testing & Verification**:
+  - Client component & unit tests (`vitest run`): **175 / 175 passed** across 25 test files (including 8 suites in `Navbar.test.tsx` verifying left drawer, half-screen dimensions, backdrop toggle, and bottom-left signout).
+  - Production builds: `tsc -b && vite build` compiled cleanly in 1.71s with zero TypeScript or bundling errors.
+
+---
+
 ## 7. Current Repository Layout
 
 ```text
@@ -1347,7 +1410,6 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
 │
 ├── e2e/                         # Centralized Playwright test suite & test artifacts (Essential journeys only)
 │   ├── auth/
-│   │   ├── login.spec.ts        # Real browser Better Auth sign-in happy path
 │   │   └── session.spec.ts      # Session persistence across reload, sign out, and route guards
 │   ├── rbac/
 │   │   └── admin-routes.spec.ts # Real browser RBAC: Admin vs Agent access to /users

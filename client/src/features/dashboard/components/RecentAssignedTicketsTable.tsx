@@ -87,13 +87,13 @@ export function RecentAssignedTicketsTable({
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/40 text-xs font-semibold text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="py-3 px-4">Ticket</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Updated</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                  <th className="py-3 px-3 sm:px-4">Ticket</th>
+                  <th className="py-3 px-3 sm:px-4">Customer</th>
+                  <th className="py-3 px-3 sm:px-4">Status</th>
+                  <th className="py-3 px-3 sm:px-4">Priority</th>
+                  <th className="py-3 px-3 sm:px-4">Category</th>
+                  <th className="py-3 px-3 sm:px-4">Updated</th>
+                  <th className="py-3 px-3 sm:px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -103,12 +103,12 @@ export function RecentAssignedTicketsTable({
                     className="hover:bg-muted/30 transition-colors group"
                     data-testid={`recent-ticket-row-${ticket.id}`}
                   >
-                    <td className="py-3 px-4">
-                      <div className="flex items-start gap-2.5">
+                    <td className="py-3 px-3 sm:px-4">
+                      <div className="flex items-start gap-2 sm:gap-2.5">
                         <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                           <TicketIcon className="h-3.5 w-3.5" />
                         </div>
-                        <div className="min-w-0 max-w-xs sm:max-w-sm">
+                        <div className="min-w-0 max-w-[140px] xs:max-w-[200px] sm:max-w-sm">
                           <Link
                             to={`/tickets/${ticket.id}`}
                             className="font-semibold text-foreground hover:text-primary transition-colors truncate block"
@@ -123,35 +123,35 @@ export function RecentAssignedTicketsTable({
                       </div>
                     </td>
 
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <div className="space-y-0.5">
                         <p className="text-xs font-medium text-foreground">{ticket.senderName || "Unknown"}</p>
                         <p className="text-[11px] text-muted-foreground">{ticket.senderEmail}</p>
                       </div>
                     </td>
 
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <TicketStatusBadge status={ticket.status} />
                     </td>
 
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <TicketPriorityBadge priority={ticket.priority} />
                     </td>
 
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <TicketCategoryBadge category={ticket.category} />
                     </td>
 
-                    <td className="py-3 px-4 whitespace-nowrap text-xs text-muted-foreground">
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap text-xs text-muted-foreground">
                       {formatDate(ticket.updatedAt || ticket.createdAt)}
                     </td>
 
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                    <td className="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
                       <Link to={`/tickets/${ticket.id}`}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 px-2.5 text-xs gap-1 hover:text-primary"
+                          className="h-8 px-2 sm:px-2.5 text-xs gap-1 hover:text-primary"
                           title="Open ticket details"
                         >
                           <span>Open</span>

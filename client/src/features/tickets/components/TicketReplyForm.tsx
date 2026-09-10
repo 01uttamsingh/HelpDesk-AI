@@ -154,7 +154,7 @@ export function TicketReplyForm({
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <label
                 htmlFor="reply-status-select"
                 className="text-xs text-muted-foreground font-medium whitespace-nowrap"
@@ -168,7 +168,7 @@ export function TicketReplyForm({
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as TicketStatus | "")}
                 disabled={isPending || isPolishing}
-                className="h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50"
+                className="h-8 rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:opacity-50 w-full sm:w-auto"
               >
                 <option value="">Keep current ({currentStatus})</option>
                 <option value="OPEN">Open</option>
@@ -177,14 +177,14 @@ export function TicketReplyForm({
               </select>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={isPending || isPolishing}
                 onClick={handlePolish}
-                className="gap-1.5 shrink-0"
+                className="gap-1.5 flex-1 sm:flex-initial justify-center"
                 data-testid="polish-reply-button"
               >
                 {isPolishing ? (
@@ -204,7 +204,7 @@ export function TicketReplyForm({
                 type="submit"
                 disabled={isPending || isPolishing}
                 size="sm"
-                className="gap-2 shrink-0"
+                className="gap-2 flex-1 sm:flex-initial justify-center"
                 data-testid="submit-reply-button"
               >
                 {isPending ? (

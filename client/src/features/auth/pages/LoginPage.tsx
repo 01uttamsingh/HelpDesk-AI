@@ -86,24 +86,24 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12 bg-muted/30">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-3 sm:px-4 py-8 sm:py-12 bg-muted/30">
       <div className="w-full max-w-md space-y-6">
         <Card className="shadow-lg border-border/80">
-          <CardHeader className="text-center space-y-3 pb-6">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <LifeBuoy className="size-6" />
+          <CardHeader className="text-center space-y-2 sm:space-y-3 p-4 sm:p-6 pb-4 sm:pb-6">
+            <div className="mx-auto flex size-10 sm:size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+              <LifeBuoy className="size-5 sm:size-6" />
             </div>
             <div className="space-y-1">
-              <CardTitle className="text-2xl font-bold tracking-tight">
+              <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                 Sign in to Helpdesk
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Enter your credentials to access your support dashboard
               </CardDescription>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-4">
             {serverError && (
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />

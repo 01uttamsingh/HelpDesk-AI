@@ -101,16 +101,16 @@ export function TicketDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* Top Navigation & Actions Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link
           to="/tickets"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           data-testid="back-to-tickets"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Tickets
+          <span>Back to Tickets</span>
         </Link>
 
         <Button

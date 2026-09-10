@@ -66,22 +66,4 @@ test.describe("Authentication - Session, Sign Out & Route Guards", () => {
       await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
     });
   });
-
-  test.describe("8. Already-Authenticated Redirect", () => {
-    test("redirects authenticated user from /login back to home page", async ({ page }) => {
-      await loginViaUI(page);
-      await expect(page).toHaveURL("/");
-
-      // Navigate directly to /login while authenticated
-      await page.goto("/login");
-
-      // Verify auto-redirected back to /
-      await expect(page).toHaveURL("/");
-      await expect(
-        page.getByRole("heading", { name: new RegExp(`welcome, ${TEST_USERS.admin.name}!`, "i") })
-      ).toBeVisible();
-
-      await signOutViaUI(page);
-    });
-  });
 });

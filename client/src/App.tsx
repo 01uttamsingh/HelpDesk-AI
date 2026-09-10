@@ -12,9 +12,9 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-background text-foreground font-sans antialiased">
+        <div className="min-h-screen flex flex-col bg-background text-foreground font-sans antialiased overflow-x-hidden">
           <Navbar />
-          <main className="flex-1">
+          <main className="flex-1 w-full">
             <Routes>
               <Route
                 path="/"
@@ -53,7 +53,7 @@ export function App() {
             </Routes>
           </main>
           <footer className="border-t border-border bg-card py-4 text-center text-xs text-muted-foreground">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-1.5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-center gap-1.5">
               <span>AI HelpDesk &copy; {new Date().getFullYear()}</span>
               <span>&bull;</span>
               <span>Made with 🖤</span>
