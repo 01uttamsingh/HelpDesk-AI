@@ -60,6 +60,7 @@ const envSchema = z.object({
     .transform((val) => val === "true"),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  SENTRY_DSN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

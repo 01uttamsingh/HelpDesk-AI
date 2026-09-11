@@ -10,6 +10,10 @@ import { userRoutes } from "./features/users";
 import { webhookRoutes, ticketRoutes } from "./features/tickets";
 import { dashboardRoutes } from "./features/dashboard";
 import { startQueue, stopQueue } from "./queue";
+import { initSentry, Sentry } from "./config/sentry";
+
+// Initialize Sentry monitoring before server setup
+initSentry();
 
 // Prevent Bun event loop idle exit on Windows
 setInterval(() => {}, 1000 * 60 * 60);
@@ -117,6 +121,16 @@ app.use("/api/webhooks", webhookRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
+// Sentry test/debug route (throws a deliberate error to verify backend logging)
+app.get("/api/debug-sentry", () => {
+  throw new Error("Sentry Backend Verification Test - Helpdesk API");
+});
+
+// Sentry Express error handler (must be before any other custom error middleware)
+if (env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
+
 // Centralized error handler
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (err?.message?.includes("CORS blocked")) {
@@ -125,6 +139,11 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       error: "CORS error: Request origin not allowed",
     });
   }
+
+  if (env.SENTRY_DSN && err) {
+    Sentry.captureException(err);
+  }
+
   console.error("Unhandled API error:", err);
   res.status(500).json({
     success: false,
