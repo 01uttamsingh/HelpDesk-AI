@@ -113,9 +113,10 @@ export class EmailService {
       );
     }
 
-    this.gmailAccessToken = data.access_token;
+    const accessToken = String(data.access_token);
+    this.gmailAccessToken = accessToken;
     this.gmailAccessTokenExpiresAt = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
-    return this.gmailAccessToken;
+    return accessToken;
   }
 
   /**
