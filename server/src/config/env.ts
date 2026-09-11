@@ -16,6 +16,12 @@ dotenv.config({ path: path.resolve(process.cwd(), "server/.env") });
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../.env") });
 dotenv.config({ path: path.resolve(import.meta.dirname, "../../../.env") });
 
+// Support Railway deployment public domain detection
+const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+const defaultPublicUrl = railwayDomain
+  ? (railwayDomain.startsWith("http") ? railwayDomain : `https://${railwayDomain}`)
+  : undefined;
+
 const envSchema = z.object({
   PORT: z
     .string()
@@ -39,11 +45,11 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z
     .string()
     .url("BETTER_AUTH_URL must be a valid URL")
-    .default("http://localhost:5000"),
+    .default(defaultPublicUrl || "http://localhost:5000"),
   CLIENT_URL: z
     .string()
     .url("CLIENT_URL must be a valid URL")
-    .default("http://localhost:5173"),
+    .default(defaultPublicUrl || "http://localhost:5173"),
   TRUSTED_ORIGINS: z.string().optional(),
   SUPPORT_EMAIL: z.string().email().default("support@helpdesk.local"),
   OPENAI_API_KEY: z.string().optional(),
@@ -86,6 +92,18 @@ export function getTrustedOrigins(): string[] {
 
   if (env.CLIENT_URL) {
     origins.add(env.CLIENT_URL.trim());
+  }
+
+  if (env.BETTER_AUTH_URL) {
+    origins.add(env.BETTER_AUTH_URL.trim());
+  }
+
+  const activeRailwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+  if (activeRailwayDomain) {
+    const railwayUrl = activeRailwayDomain.startsWith("http")
+      ? activeRailwayDomain
+      : `https://${activeRailwayDomain}`;
+    origins.add(railwayUrl);
   }
 
   if (env.TRUSTED_ORIGINS) {

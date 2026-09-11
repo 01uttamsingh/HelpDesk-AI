@@ -1304,13 +1304,42 @@ Whenever dealing with libraries, APIs, SDKs, or versions (e.g., `@google/genai`,
   - Client component & unit tests (`vitest run`): **175 / 175 passed** across 25 test files (including 8 suites in `Navbar.test.tsx` verifying left drawer, half-screen dimensions, backdrop toggle, and bottom-left signout).
   - Production builds: `tsc -b && vite build` compiled cleanly in 1.71s with zero TypeScript or bundling errors.
 
+### Milestone 42: Production Deployment Preparation for Railway (Completed)
+- **Deployment Strategy & Unified Architecture**:
+  - Configured full-stack unified deployment: single container serves both Express REST API (`/api/*`) and built React 19 SPA (`client/dist`), with SPA routing fallback (`index.html`) for client navigation.
+  - Same-origin deployment guarantees zero CORS issues and reliable Better Auth HttpOnly cookie session persistence in production.
+- **Docker & Containerization**:
+  - `Dockerfile`: Multi-stage build using `oven/bun:1-debian`, installs OpenSSL for Prisma engine compatibility, builds frontend client, validates backend TypeScript, and exposes port 5000.
+  - `start.sh`: Container entrypoint script automatically executing `prisma migrate deploy`, idempotent database seeding (`prisma/seed.ts`), and launching Express server on `0.0.0.0:${PORT}`. Defensively sanitized with `sed -i 's/\r$//'` against CRLF line ending issues.
+  - `.dockerignore`: Excludes local `node_modules`, test artifacts, logs, and sensitive `.env*` files.
+- **Railway Infrastructure & Config-as-Code**:
+  - `railway.toml`: Railway configuration file specifying Dockerfile builder, restart policy on failure (max 5 retries), and `/api/health` healthcheck endpoint with 120s timeout.
+  - Dynamic Railway public domain detection in `server/src/config/env.ts`: Automatically derives `BETTER_AUTH_URL`, `CLIENT_URL`, and CORS `trustedOrigins` from `RAILWAY_PUBLIC_DOMAIN` or `RAILWAY_STATIC_URL`.
+  - Express server: Explicitly binds to `0.0.0.0` for container proxy routing and provides explicit 404 JSON response for unmatched `/api/*` endpoints.
+  - Added Better Auth `useSecureCookies: env.NODE_ENV === "production"` for production cookie security.
+- **Package Scripts & Environment Documentation**:
+  - Root `package.json`: Added `"build": "bun run build:client && bun run build:server"` and `"start": "bun run --cwd server start:prod"`.
+  - `server/package.json`: Added `"prisma:migrate:deploy"` and `"start:prod"`.
+  - Updated environment examples: [`.env.example`](.env.example), [`server/.env.example`](server/.env.example), and [`client/.env.example`](client/.env.example).
+  - Authored comprehensive step-by-step deployment guide in [`RAILWAY_DEPLOYMENT.md`](RAILWAY_DEPLOYMENT.md).
+- **Verification**:
+  - Full production build (`bun run build`): Both client and server compiled with 0 errors.
+  - Backend unit tests (`bun test`): **228 / 228 passed** across 16 test files.
+  - Frontend unit tests (`vitest run`): **178 / 178 passed** across 26 test files.
+
 ---
 
 ## 7. Current Repository Layout
 
 ```text
+├── Dockerfile                   # Multi-stage Bun production Dockerfile for Railway
+├── railway.toml                 # Railway deployment config & healthcheck definition
+├── start.sh                     # Railway startup script (migrations -> seed -> server)
+├── .dockerignore                # Production container exclusions
+├── RAILWAY_DEPLOYMENT.md        # Step-by-step Railway deployment documentation
+├── .env.example                 # Root environment template
 ├── client/                      # React + Vite + TypeScript (Bun)
-│   ├── src/
+│   ├── .env.example
 │   │   ├── components/          # Truly shared / application-wide UI
 │   │   │   ├── ui/              # shadcn UI components (Base UI primitives)
 │   │   │   │   ├── alert.tsx

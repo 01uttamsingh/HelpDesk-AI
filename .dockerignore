@@ -1,0 +1,17 @@
+node_modules
+client/node_modules
+server/node_modules
+dist
+client/dist
+server/dist
+.git
+.agents
+.claude
+e2e/test-results
+e2e/playwright-report
+*.log
+.env
+.env.test
+server/.env
+server/.env.test
+client/.env

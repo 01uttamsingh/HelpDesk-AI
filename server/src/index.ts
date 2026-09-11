@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -126,6 +128,34 @@ app.get("/api/debug-sentry", () => {
   throw new Error("Sentry Backend Verification Test - Helpdesk API");
 });
 
+// Explicit 404 handler for unmatched /api/* endpoints
+app.all("/api/*", (_req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    error: "API endpoint not found",
+  });
+});
+
+// Serve frontend SPA in production if client/dist exists
+const possibleDistPaths = [
+  path.resolve(process.cwd(), "client/dist"),
+  path.resolve(process.cwd(), "../client/dist"),
+  path.resolve(import.meta.dirname, "../../client/dist"),
+  path.resolve(import.meta.dirname, "../../../client/dist"),
+  path.resolve("/app/client/dist"),
+];
+
+const clientDistPath = possibleDistPaths.find((p) => fs.existsSync(p));
+
+if (clientDistPath) {
+  app.use(express.static(clientDistPath));
+
+  // Catch-all route to serve index.html for React Router SPA client navigation
+  app.get("*", (_req: Request, res: Response) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+}
+
 // Sentry Express error handler (must be before any other custom error middleware)
 if (env.SENTRY_DSN) {
   Sentry.setupExpressErrorHandler(app);
@@ -151,7 +181,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-app.listen(PORT, async () => {
+app.listen(PORT, "0.0.0.0", async () => {
   try {
     await prisma.$connect();
     console.log(`✅ Connected to PostgreSQL database (helpdesk)`);
@@ -160,7 +190,7 @@ app.listen(PORT, async () => {
   } catch (err) {
     console.error(`❌ Failed during startup:`, err);
   }
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   console.log(`🔒 Trusted CORS origins: ${trustedOrigins.join(", ")}`);
 });
 
