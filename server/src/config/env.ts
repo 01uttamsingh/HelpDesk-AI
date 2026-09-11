@@ -33,6 +33,12 @@ export function sanitizeUrl(val: unknown, fallback?: string): string | undefined
   return withProtocol.replace(/\/+$/, "");
 }
 
+export function cleanEnvString(val: unknown): string | undefined {
+  if (typeof val !== "string") return undefined;
+  const stripped = val.trim().replace(/^["']|["']$/g, "").trim();
+  return stripped || undefined;
+}
+
 // Support Railway deployment public domain detection
 const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
 const defaultPublicUrl = railwayDomain ? sanitizeUrl(railwayDomain) : undefined;
@@ -67,16 +73,23 @@ const envSchema = z.object({
     (val) => sanitizeUrl(val, defaultPublicUrl || "http://localhost:5173"),
     z.string().url("CLIENT_URL must be a valid URL")
   ),
-  TRUSTED_ORIGINS: z.string().optional(),
+  TRUSTED_ORIGINS: z.preprocess(cleanEnvString, z.string().optional()),
   SUPPORT_EMAIL: z.preprocess(
-    (val) => (typeof val === "string" && val.trim() !== "" ? val.trim() : "support@helpdesk.local"),
+    (val) => {
+      const cleaned = cleanEnvString(val);
+      return cleaned || "support@helpdesk.local";
+    },
     z.string().email().default("support@helpdesk.local")
   ),
-  OPENAI_API_KEY: z.string().optional(),
-  SMTP_HOST: z.string().optional().default("smtp.gmail.com"),
+  OPENAI_API_KEY: z.preprocess(cleanEnvString, z.string().optional()),
+  EMAIL_PROVIDER: z.preprocess(cleanEnvString, z.string().optional().default("gmail")),
+  SMTP_HOST: z.preprocess(cleanEnvString, z.string().optional().default("smtp.gmail.com")),
   SMTP_PORT: z
     .preprocess(
-      (val) => (val === undefined || val === "" ? "465" : val),
+      (val) => {
+        const cleaned = cleanEnvString(val);
+        return cleaned === undefined || cleaned === "" ? "465" : cleaned;
+      },
       z.union([z.string(), z.number()])
     )
     .transform((val) => {
@@ -85,13 +98,18 @@ const envSchema = z.object({
     }),
   SMTP_SECURE: z
     .preprocess(
-      (val) => (val === undefined || val === "" ? "true" : val),
+      (val) => {
+        const cleaned = cleanEnvString(val);
+        return cleaned === undefined || cleaned === "" ? "true" : cleaned.toLowerCase();
+      },
       z.union([z.string(), z.boolean()])
     )
     .transform((val) => val === true || val === "true"),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
-  SENTRY_DSN: z.string().optional(),
+  SMTP_USER: z.preprocess(cleanEnvString, z.string().optional()),
+  SMTP_PASS: z.preprocess(cleanEnvString, z.string().optional()),
+  RESEND_API_KEY: z.preprocess(cleanEnvString, z.string().optional()),
+  RESEND_FROM: z.preprocess(cleanEnvString, z.string().optional()),
+  SENTRY_DSN: z.preprocess(cleanEnvString, z.string().optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -107,7 +107,9 @@ ADMIN_NAME=Admin
 # OpenAI Key (For AI triage, polishing, and auto-resolution)
 OPENAI_API_KEY=sk-proj-your_openai_api_key
 
-# Outbound Email Delivery (Optional for local testing)
+# Outbound Email Delivery (Resend API recommended for production/Railway, or SMTP)
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM=HelpDesk Support <onboarding@resend.dev>
 EMAIL_PROVIDER=gmail
 SUPPORT_EMAIL=support@example.com
 SMTP_HOST=smtp.gmail.com

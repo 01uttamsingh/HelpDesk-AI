@@ -343,9 +343,18 @@ export class TicketController {
                 agentName: req.user?.name || "Support Agent",
                 inReplyToMessageId: ticket.messageId,
               })
+              .then((result) => {
+                if (result.success) {
+                  console.log(`✅ [Outbound Email Sent] Delivered reply for ticket #${ticket.id} to ${ticket.senderEmail} (ID: ${result.messageId})`);
+                } else {
+                  console.error(`❌ [Outbound Email Failed] Could not deliver reply for ticket #${ticket.id} to ${ticket.senderEmail}: ${result.error}`);
+                }
+              })
               .catch((err) => {
                 console.error("Failed to send outbound email reply:", err);
               });
+          } else {
+            console.warn(`⚠️ [Outbound Email Skipped] Ticket #${parsedParams.data.id} has no senderEmail recorded.`);
           }
         })
         .catch((err) => {
