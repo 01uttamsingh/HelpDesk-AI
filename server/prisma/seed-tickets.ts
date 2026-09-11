@@ -926,6 +926,12 @@ const rawTickets: Omit<TicketSeedData, "createdAt">[] = [
 ];
 
 async function main() {
+  const existingCount = await prisma.ticket.count();
+  if (existingCount >= 100) {
+    console.log(`ℹ️ Database already has ${existingCount} tickets. Skipping duplicate ticket seed.`);
+    return;
+  }
+
   console.log(`🚀 Starting generation of 100 diverse, realistic tickets...`);
 
   const now = Date.now();
