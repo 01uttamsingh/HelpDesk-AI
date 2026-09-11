@@ -17,11 +17,11 @@ createRoot(document.getElementById('root')!).render(
             <p className="text-sm text-muted-foreground">
               An unexpected error occurred. The incident has been reported to our engineering team.
             </p>
-            {error && (
+            {error ? (
               <pre className="text-xs bg-muted p-3 rounded-lg text-left overflow-auto max-h-32 text-destructive">
-                {error.toString()}
+                {String(error)}
               </pre>
-            )}
+            ) : null}
             <button
               onClick={() => {
                 resetError();

@@ -30,22 +30,22 @@ export function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6" data-testid="dashboard-page">
       {/* Top Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2 border-b border-border/60">
         <div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
-              <LayoutDashboard className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 text-primary border border-primary/20 shrink-0 shadow-xs">
+              <LayoutDashboard className="h-4.5 w-4.5" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Dashboard
             </h1>
             {isAdmin ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary border border-primary/20">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary border border-primary/20">
                 <Shield className="h-3 w-3" />
                 Administrator
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground border border-border">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-foreground border border-border/60">
                 <Headset className="h-3 w-3" />
                 Support Agent
               </span>
@@ -59,14 +59,14 @@ export function DashboardPage() {
         {/* Header Actions */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           {isAdmin && (
-            <div className="flex rounded-lg bg-muted/60 p-1 border border-border flex-1 sm:flex-initial justify-center">
+            <div className="flex rounded-lg bg-muted/40 p-1 border border-border/60 flex-1 sm:flex-initial justify-center gap-1">
               <button
                 type="button"
                 onClick={() => setAdminViewTab("overview")}
-                className={`inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-initial px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                className={`inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-initial px-3 py-1 text-xs font-medium rounded-md transition-all cursor-pointer ${
                   adminViewTab === "overview"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-background text-foreground shadow-xs ring-1 ring-border/50 font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                 }`}
                 data-testid="admin-tab-overview"
               >
@@ -76,10 +76,10 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setAdminViewTab("assigned")}
-                className={`inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-initial px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                className={`inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-initial px-3 py-1 text-xs font-medium rounded-md transition-all cursor-pointer ${
                   adminViewTab === "assigned"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-background text-foreground shadow-xs ring-1 ring-border/50 font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                 }`}
                 data-testid="admin-tab-assigned"
               >
@@ -95,7 +95,7 @@ export function DashboardPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="gap-1.5 text-xs h-9 shrink-0"
+            className="gap-1.5 text-xs h-9 shrink-0 border-border/70 hover:bg-muted/50"
             data-testid="refresh-dashboard-button"
           >
             <RefreshCw className={`h-3.5 w-3.5 text-muted-foreground ${isFetching ? "animate-spin" : ""}`} />

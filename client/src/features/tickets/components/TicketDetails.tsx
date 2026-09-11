@@ -54,10 +54,10 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
   return (
     <div className="space-y-6">
       {/* Ticket Header & Metadata */}
-      <div className="space-y-3 pb-2 border-b border-border">
+      <div className="space-y-3 pb-3 border-b border-border/70">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-mono font-semibold bg-muted text-foreground border border-border"
+            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium bg-muted/60 text-foreground border border-border/60"
             data-testid="ticket-detail-id"
           >
             #{ticket.id}
@@ -68,7 +68,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
         </div>
 
         <h1
-          className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground break-words"
+          className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-foreground break-words"
           data-testid="ticket-detail-subject"
         >
           {ticket.subject}
@@ -76,8 +76,8 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
       </div>
 
       {/* Main Content (Customer Inquiry / Message) */}
-      <Card data-testid="ticket-message-card">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border">
+      <Card className="border-border/70 shadow-xs bg-card" data-testid="ticket-message-card">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border/60">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm border border-primary/20">
               {ticket.senderName ? ticket.senderName.charAt(0).toUpperCase() : <User className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -124,7 +124,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 size="sm"
                 onClick={handleSummarize}
                 disabled={isSummarizing}
-                className="gap-1.5 text-xs font-medium"
+                className="gap-1.5 text-xs font-medium border-primary/30 text-primary hover:bg-primary/10 transition-colors shadow-xs"
                 data-testid="summarize-ticket-button"
               >
                 {isSummarizing ? (
@@ -135,7 +135,7 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
                 ) : (
                   <>
                     <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    <span>Summarize</span>
+                    <span>Summarize with AI</span>
                   </>
                 )}
               </Button>
@@ -158,11 +158,13 @@ export function TicketDetails({ ticket }: TicketDetailsProps) {
             {summary && (
               <div
                 data-testid="ticket-summary-content"
-                className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2 text-foreground"
+                className="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-indigo-500/5 to-transparent p-4 sm:p-5 space-y-2.5 text-foreground shadow-xs ring-1 ring-cyan-500/10"
               >
-                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                  <Sparkles className="h-4 w-4" />
-                  <span>Ticket & Conversation Summary</span>
+                <div className="flex items-center gap-2 text-xs font-semibold text-cyan-600 dark:text-cyan-400">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">
+                    <Sparkles className="h-3 w-3" />
+                  </div>
+                  <span>AI Intelligence Summary</span>
                 </div>
                 <div className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans text-foreground/90">
                   {summary}

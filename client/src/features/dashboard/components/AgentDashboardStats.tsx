@@ -21,24 +21,24 @@ export function AgentDashboardStats({ stats, isLoading = false }: AgentDashboard
       {/* 5 Workload & Queue KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* 1. Total Open Tickets (Team Queue) */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="agent-total-open">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-amber-500/40 hover:shadow-xs rounded-xl" data-testid="agent-total-open">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               Total Open Tickets
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-              <Clock className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <Clock className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-12" /> : stats?.openTickets ?? 0}
             </div>
             <div className="flex items-center justify-between pt-1">
               <p className="text-xs text-muted-foreground">Team open queue</p>
               <Link
                 to="/tickets?status=OPEN"
-                className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline gap-0.5"
+                className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline gap-0.5"
               >
                 <span>View queue</span>
                 <ArrowUpRight className="h-3 w-3" />
@@ -47,17 +47,17 @@ export function AgentDashboardStats({ stats, isLoading = false }: AgentDashboard
           </CardContent>
         </Card>
         {/* 1. Total Assigned Tickets */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="agent-assigned-total">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-primary/40 hover:shadow-xs rounded-xl" data-testid="agent-assigned-total">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               Assigned to Me
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <UserCheck className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary border border-primary/20">
+              <UserCheck className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-12" /> : stats?.assignedTicketsCount ?? 0}
             </div>
             <p className="text-xs text-muted-foreground pt-1">
@@ -67,17 +67,17 @@ export function AgentDashboardStats({ stats, isLoading = false }: AgentDashboard
         </Card>
 
         {/* 2. My Open Tickets */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="agent-assigned-open">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-amber-500/40 hover:shadow-xs rounded-xl" data-testid="agent-assigned-open">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               My Open Tickets
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-              <Clock className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <Clock className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-12" /> : stats?.assignedOpenCount ?? 0}
             </div>
             <p className="text-xs text-muted-foreground pt-1">
@@ -87,17 +87,17 @@ export function AgentDashboardStats({ stats, isLoading = false }: AgentDashboard
         </Card>
 
         {/* 3. My Resolved Tickets */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="agent-assigned-resolved">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-emerald-500/40 hover:shadow-xs rounded-xl" data-testid="agent-assigned-resolved">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               My Resolved
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <CheckCircle2 className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <CheckCircle2 className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-12" /> : stats?.assignedResolvedCount ?? 0}
             </div>
             <p className="text-xs text-muted-foreground pt-1">
@@ -107,17 +107,17 @@ export function AgentDashboardStats({ stats, isLoading = false }: AgentDashboard
         </Card>
 
         {/* 4. My Closed Tickets */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="agent-assigned-closed">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-slate-500/40 hover:shadow-xs rounded-xl" data-testid="agent-assigned-closed">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               My Closed
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground border border-border">
-              <Archive className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
+              <Archive className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-12" /> : stats?.assignedClosedCount ?? 0}
             </div>
             <p className="text-xs text-muted-foreground pt-1">

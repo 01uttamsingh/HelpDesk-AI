@@ -24,17 +24,17 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
       {/* 5 Core Management KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* 1. Total Tickets */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="admin-total-tickets">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-primary/40 hover:shadow-xs rounded-xl" data-testid="admin-total-tickets">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               Total Tickets
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <Ticket className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary border border-primary/20">
+              <Ticket className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-16" /> : stats?.totalTickets ?? 0}
             </div>
             <div className="flex items-center justify-between pt-1">
@@ -51,24 +51,24 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
         </Card>
 
         {/* 2. Open Tickets */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="admin-open-tickets">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-amber-500/40 hover:shadow-xs rounded-xl" data-testid="admin-open-tickets">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               Open Tickets
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-              <Clock className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <Clock className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-16" /> : stats?.openTickets ?? 0}
             </div>
             <div className="flex items-center justify-between pt-1">
               <p className="text-xs text-muted-foreground">Needs attention</p>
               <Link
                 to="/tickets?status=OPEN"
-                className="inline-flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline gap-0.5"
+                className="inline-flex items-center text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline gap-0.5"
               >
                 <span>Review</span>
                 <ArrowUpRight className="h-3 w-3" />
@@ -78,17 +78,17 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
         </Card>
 
         {/* 3. Resolved by AI */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="admin-ai-resolved">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-cyan-500/40 hover:shadow-xs rounded-xl" data-testid="admin-ai-resolved">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               Resolved by AI
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-              <Bot className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+              <Bot className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-16" /> : stats?.aiResolvedTickets ?? 0}
             </div>
             <p className="text-xs text-muted-foreground pt-1">
@@ -102,17 +102,17 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
         </Card>
 
         {/* 4. % of Tickets Resolved by AI */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="admin-ai-percentage">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-emerald-500/40 hover:shadow-xs rounded-xl" data-testid="admin-ai-percentage">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               % Resolved by AI
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <Percent className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <Percent className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? <Skeleton className="h-8 w-16" /> : `${stats?.aiResolvedPercentage ?? 0}%`}
             </div>
             <p className="text-xs text-muted-foreground pt-1">
@@ -126,17 +126,17 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
         </Card>
 
         {/* 5. Average Resolution Time */}
-        <Card className="border-border bg-card shadow-xs transition-shadow hover:shadow-sm" data-testid="admin-avg-resolution-time">
+        <Card className="border-border/70 bg-card shadow-xs transition-all duration-150 hover:border-indigo-500/40 hover:shadow-xs rounded-xl" data-testid="admin-avg-resolution-time">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               Avg Resolution Time
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              <Timer className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <Timer className="h-3.5 w-3.5" />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {isLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
@@ -152,45 +152,45 @@ export function AdminDashboardStats({ stats, isLoading = false }: AdminDashboard
 
       {/* Secondary Status Breakdown Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border/70 shadow-xs hover:border-emerald-500/30 transition-all duration-150">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <CheckCircle2 className="h-4 w-4" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Total Resolved</p>
-              <p className="text-base font-bold text-foreground">
+              <p className="text-base font-bold tracking-tight text-foreground tabular-nums">
                 {isLoading ? "..." : stats?.resolvedTickets ?? 0}
               </p>
             </div>
           </div>
           <Link
             to="/tickets?status=RESOLVED"
-            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 font-medium transition-colors"
           >
             <span>Browse</span>
-            <ArrowUpRight className="h-3 w-3" />
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-muted text-muted-foreground">
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-card border border-border/70 shadow-xs hover:border-slate-500/30 transition-all duration-150">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
               <Archive className="h-4 w-4" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Total Closed</p>
-              <p className="text-base font-bold text-foreground">
+              <p className="text-base font-bold tracking-tight text-foreground tabular-nums">
                 {isLoading ? "..." : stats?.closedTickets ?? 0}
               </p>
             </div>
           </div>
           <Link
             to="/tickets?status=CLOSED"
-            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 font-medium transition-colors"
           >
             <span>Browse</span>
-            <ArrowUpRight className="h-3 w-3" />
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>

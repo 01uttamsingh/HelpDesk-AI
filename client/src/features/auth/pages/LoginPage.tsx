@@ -86,18 +86,18 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-3 sm:px-4 py-8 sm:py-12 bg-muted/30">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-3 sm:px-4 py-8 sm:py-12 bg-muted/20">
       <div className="w-full max-w-md space-y-6">
-        <Card className="shadow-lg border-border/80">
+        <Card className="shadow-xl border-border/70 bg-card rounded-2xl ring-1 ring-border/40">
           <CardHeader className="text-center space-y-2 sm:space-y-3 p-4 sm:p-6 pb-4 sm:pb-6">
-            <div className="mx-auto flex size-10 sm:size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+            <div className="mx-auto flex size-11 sm:size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-xs ring-1 ring-primary/25">
               <LifeBuoy className="size-5 sm:size-6" />
             </div>
             <div className="space-y-1">
-              <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+              <CardTitle className="text-xl sm:text-2xl font-semibold tracking-tight">
                 Sign in to Helpdesk
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground">
                 Enter your credentials to access your support dashboard
               </CardDescription>
             </div>

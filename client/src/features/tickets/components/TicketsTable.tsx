@@ -165,10 +165,10 @@ export function TicketsTable({
   });
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+    <div className="rounded-xl border border-border/70 bg-card overflow-hidden shadow-xs">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm" data-testid="tickets-table">
-          <thead className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground">
+          <thead className="border-b border-border/70 bg-muted/30 text-xs font-medium text-muted-foreground">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {

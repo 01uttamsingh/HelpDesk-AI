@@ -114,13 +114,13 @@ export function TicketsPage() {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-2 border-b border-border/60">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
-              <Ticket className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 text-primary border border-primary/20 shrink-0 shadow-xs">
+              <Ticket className="h-4.5 w-4.5" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Tickets
             </h1>
           </div>
@@ -137,11 +137,11 @@ export function TicketsPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="gap-1.5 text-xs sm:text-sm"
+            className="gap-1.5 text-xs sm:text-sm border-border/70 hover:bg-muted/50 shadow-xs cursor-pointer"
             data-testid="refresh-tickets-button"
           >
             <RefreshCw
-              className={`h-4 w-4 text-muted-foreground ${
+              className={`h-3.5 w-3.5 text-muted-foreground ${
                 isFetching ? "animate-spin" : ""
               }`}
             />

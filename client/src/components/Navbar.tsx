@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { useSession, signOut } from "@/features/auth";
+import { ThemeToggle } from "./ThemeToggle";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,7 +73,7 @@ export function Navbar() {
   const user = session.data?.user;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-30 w-full border-b border-border/70 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 shadow-[0_1px_2px_0_rgba(0,0,0,0.02)]">
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-3 sm:px-6 lg:px-8">
         {/* Left Section: Menu Toggle + Brand Logo + Desktop Nav */}
         <div className="flex items-center gap-2 sm:gap-6">
@@ -81,41 +82,41 @@ export function Navbar() {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
+              className="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer border border-border/40"
               aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={isMobileMenuOpen}
               data-testid="navbar-mobile-toggle"
             >
               {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <X className="h-4.5 w-4.5" />
               ) : (
-                <Menu className="h-5 w-5" />
+                <Menu className="h-4.5 w-4.5" />
               )}
             </button>
           )}
 
           <Link to="/" className="flex items-center gap-2 sm:gap-2.5 transition-opacity hover:opacity-90 shrink-0">
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
-              <LifeBuoy className="h-4 w-4 sm:h-5 sm:w-5" />
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-xs ring-1 ring-primary/20">
+              <LifeBuoy className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-base sm:text-lg font-bold tracking-tight text-foreground">Helpdesk</span>
-              <span className="rounded-full bg-secondary px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-secondary-foreground border border-border">
+              <span className="text-base sm:text-lg font-semibold tracking-tight text-foreground">Helpdesk</span>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-primary border border-primary/20">
                 AI
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation Links (hidden on < md) */}
+          {/* Desktop Segmented Pill Navigation Links (hidden on < md) */}
           {user && (
-            <nav className="hidden md:flex items-center gap-5">
+            <nav className="hidden md:flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border/50">
               <Link
                 to="/"
                 className={cn(
-                  "text-sm transition-colors",
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
                   isDashboardActive
-                    ? "text-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground font-medium"
+                    ? "bg-background text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                 )}
                 aria-current={isDashboardActive ? "page" : undefined}
                 data-testid="nav-dashboard-link"
@@ -125,10 +126,10 @@ export function Navbar() {
               <Link
                 to="/tickets"
                 className={cn(
-                  "text-sm transition-colors",
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
                   isTicketsActive
-                    ? "text-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground font-medium"
+                    ? "bg-background text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                 )}
                 aria-current={isTicketsActive ? "page" : undefined}
                 data-testid="nav-tickets-link"
@@ -139,10 +140,10 @@ export function Navbar() {
                 <Link
                   to="/users"
                   className={cn(
-                    "text-sm transition-colors",
+                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer",
                     isUsersActive
-                      ? "text-foreground font-bold"
-                      : "text-muted-foreground hover:text-foreground font-medium"
+                      ? "bg-background text-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                   )}
                   aria-current={isUsersActive ? "page" : undefined}
                   data-testid="nav-users-link"
@@ -154,8 +155,9 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Right Section: Auth State & User Info */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Right Section: Theme Toggle + Auth State & User Info */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <ThemeToggle />
           {session.isPending ? (
             <div className="flex items-center gap-2">
               <div className="h-8 w-16 sm:w-24 bg-muted animate-pulse rounded-md" />
@@ -165,14 +167,14 @@ export function Navbar() {
             <div className="flex items-center gap-2 sm:gap-3">
               {/* User Profile on right side */}
               <div
-                className="flex items-center gap-1.5 sm:gap-2 py-1 px-2 sm:px-2.5 rounded-lg bg-muted/50 border border-border max-w-[150px] xs:max-w-[180px] sm:max-w-xs shrink-0"
+                className="flex items-center gap-1.5 sm:gap-2 py-1 px-2 sm:px-2.5 rounded-lg bg-muted/40 border border-border/60 max-w-[150px] xs:max-w-[180px] sm:max-w-xs shrink-0"
                 data-testid="navbar-user-profile"
               >
-                <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20">
-                  <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-medium border border-primary/25">
+                  {user.name ? user.name.charAt(0).toUpperCase() : <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                 </div>
                 <div className="flex flex-col text-left min-w-0">
-                  <span className="text-xs sm:text-sm font-semibold text-foreground leading-tight truncate">
+                  <span className="text-xs sm:text-sm font-medium text-foreground leading-tight truncate">
                     {user.name}
                   </span>
                   <span className="hidden sm:block text-[11px] text-muted-foreground leading-none truncate">
@@ -188,7 +190,7 @@ export function Navbar() {
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
                 title="Sign out of your account"
-                className="hidden md:inline-flex gap-1.5 h-8 px-2.5 sm:px-3 text-xs sm:text-sm shrink-0 cursor-pointer"
+                className="hidden md:inline-flex gap-1.5 h-8 px-2.5 sm:px-3 text-xs sm:text-sm shrink-0 cursor-pointer border-border/60 hover:bg-muted/50"
               >
                 {isLoggingOut ? (
                   <>
@@ -206,7 +208,7 @@ export function Navbar() {
           ) : (
             <Link
               to="/login"
-              className={cn(buttonVariants({ size: "sm" }), "gap-1.5 text-xs sm:text-sm")}
+              className={cn(buttonVariants({ size: "sm" }), "gap-1.5 text-xs sm:text-sm shadow-xs font-medium")}
             >
               <LogIn className="h-4 w-4" />
               <span>Sign in</span>
@@ -267,7 +269,7 @@ export function Navbar() {
 
             {/* Drawer Navigation Links */}
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
-              <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="px-3 pb-2 text-xs font-medium text-muted-foreground">
                 Navigation
               </div>
 
@@ -277,7 +279,7 @@ export function Navbar() {
                 className={cn(
                   "flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm transition-colors",
                   isDashboardActive
-                    ? "bg-primary/10 text-primary font-bold shadow-xs"
+                    ? "bg-primary/10 text-primary font-medium shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
                 )}
                 aria-current={isDashboardActive ? "page" : undefined}
@@ -341,6 +343,9 @@ export function Navbar() {
                   </span>
                 </div>
               </div>
+
+              {/* Theme switcher in drawer */}
+              <ThemeToggle showLabel className="w-full" />
 
               {/* Sign Out Button strictly pinned at the bottom of drawer */}
               <Button

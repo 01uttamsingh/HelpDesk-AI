@@ -46,7 +46,7 @@ export function TicketsFilter({
             placeholder="Search tickets by subject, sender, or content..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 w-full"
+            className="pl-9 w-full border-border/70 bg-card hover:border-primary/40 focus:border-primary/60 transition-colors shadow-xs"
             data-testid="tickets-search-input"
           />
         </div>
@@ -62,7 +62,7 @@ export function TicketsFilter({
               id="category-select"
               value={categoryFilter}
               onChange={(e) => onCategoryFilterChange(e.target.value as CategoryFilter)}
-              className="h-8 w-full xs:w-auto rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              className="h-8.5 w-full xs:w-auto rounded-lg border border-border/70 bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs hover:border-primary/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors cursor-pointer"
               data-testid="tickets-category-select"
             >
               <option value="ALL">All Categories</option>
@@ -82,7 +82,7 @@ export function TicketsFilter({
               id="priority-select"
               value={priorityFilter}
               onChange={(e) => onPriorityFilterChange(e.target.value as PriorityFilter)}
-              className="h-8 w-full xs:w-auto rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              className="h-8.5 w-full xs:w-auto rounded-lg border border-border/70 bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs hover:border-primary/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors cursor-pointer"
               data-testid="tickets-priority-select"
             >
               <option value="ALL">All Priorities</option>
@@ -99,7 +99,7 @@ export function TicketsFilter({
               id="sort-select"
               value={sortFilter}
               onChange={(e) => onSortFilterChange(e.target.value as SortFilter)}
-              className="h-8 w-full xs:w-auto rounded-md border border-input bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              className="h-8.5 w-full xs:w-auto rounded-lg border border-border/70 bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-xs hover:border-primary/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors cursor-pointer"
               data-testid="tickets-sort-select"
             >
               <option value="newest">Newest First</option>
@@ -110,14 +110,14 @@ export function TicketsFilter({
       </div>
 
       {/* Status Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 rounded-lg bg-muted/60 border border-border w-full sm:w-fit overflow-x-auto max-w-full">
+      <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/40 border border-border/60 w-full sm:w-fit overflow-x-auto max-w-full">
         <button
           type="button"
           onClick={() => onStatusFilterChange("ALL")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             statusFilter === "ALL"
-              ? "bg-card text-foreground shadow-xs border border-border"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border/50 font-semibold"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
           }`}
           data-testid="status-filter-all"
         >
@@ -126,10 +126,10 @@ export function TicketsFilter({
         <button
           type="button"
           onClick={() => onStatusFilterChange("OPEN")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             statusFilter === "OPEN"
-              ? "bg-card text-foreground shadow-xs border border-border"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border/50 font-semibold"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
           }`}
           data-testid="status-filter-open"
         >
@@ -138,10 +138,10 @@ export function TicketsFilter({
         <button
           type="button"
           onClick={() => onStatusFilterChange("RESOLVED")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             statusFilter === "RESOLVED"
-              ? "bg-card text-foreground shadow-xs border border-border"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border/50 font-semibold"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
           }`}
           data-testid="status-filter-resolved"
         >
@@ -150,10 +150,10 @@ export function TicketsFilter({
         <button
           type="button"
           onClick={() => onStatusFilterChange("CLOSED")}
-          className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
             statusFilter === "CLOSED"
-              ? "bg-card text-foreground shadow-xs border border-border"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border/50 font-semibold"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
           }`}
           data-testid="status-filter-closed"
         >
