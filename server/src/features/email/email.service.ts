@@ -99,10 +99,19 @@ export class EmailService {
         headers["References"] = options.inReplyToMessageId;
       }
 
-      // If user specified custom RESEND_FROM, use it. Otherwise fallback to onboarding@resend.dev for test domains.
-      const from = env.RESEND_FROM || (env.SUPPORT_EMAIL && !env.SUPPORT_EMAIL.endsWith("@gmail.com")
-        ? env.SUPPORT_EMAIL
-        : "HelpDesk Support <onboarding@resend.dev>");
+      // Resend does NOT permit sending from public webmail domains (e.g. @gmail.com).
+      // If a custom domain is configured in RESEND_FROM (e.g. support@yourcompany.com), use it;
+      // otherwise, default to Resend's allowed sandbox address "HelpDesk Support <onboarding@resend.dev>".
+      let from = env.RESEND_FROM;
+      if (
+        !from ||
+        from.includes("@gmail.com") ||
+        from.includes("@yahoo.com") ||
+        from.includes("@outlook.com") ||
+        from.includes("@hotmail.com")
+      ) {
+        from = "HelpDesk Support <onboarding@resend.dev>";
+      }
 
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
