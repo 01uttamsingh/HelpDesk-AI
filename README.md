@@ -107,9 +107,13 @@ ADMIN_NAME=Admin
 # OpenAI Key (For AI triage, polishing, and auto-resolution)
 OPENAI_API_KEY=sk-proj-your_openai_api_key
 
-# Outbound Email Delivery (Resend API recommended for production/Railway, or SMTP)
-RESEND_API_KEY=re_your_resend_api_key
-RESEND_FROM=HelpDesk Support <onboarding@resend.dev>
+# Outbound Email Delivery:
+# 1. Google Gmail REST API (Recommended for Railway/production - runs over HTTPS Port 443)
+GMAIL_CLIENT_ID=your_google_oauth_client_id
+GMAIL_CLIENT_SECRET=your_google_oauth_client_secret
+GMAIL_REFRESH_TOKEN=your_google_oauth_refresh_token
+
+# 2. Fallback SMTP / Gmail settings (Standard SMTP ports 465/587, requires Railway Pro or local dev)
 EMAIL_PROVIDER=gmail
 SUPPORT_EMAIL=support@example.com
 SMTP_HOST=smtp.gmail.com

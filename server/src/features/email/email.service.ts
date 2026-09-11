@@ -33,11 +33,6 @@ export class EmailService {
       return;
     }
 
-    if (env.RESEND_API_KEY) {
-      console.log("🚀 [Email Service] Configured with Resend HTTPS API for outbound emails (immune to SMTP port blocks).");
-      return;
-    }
-
     if (!env.SMTP_USER || !env.SMTP_PASS) {
       console.warn("⚠️ SMTP credentials not fully configured (SMTP_USER or SMTP_PASS is missing). Outbound emails will be simulated.");
       return;
@@ -73,7 +68,7 @@ export class EmailService {
           if (err) {
             console.error("❌ [SMTP Error] Connection verification failed:", err.message);
             if (err.message.includes("ETIMEDOUT") || err.message.includes("ENETUNREACH") || err.message.includes("Greeting never received")) {
-              console.error("💡 [Railway SMTP Notice] Connection timed out! Railway blocks outbound SMTP ports 25, 465, and 587 on Free & Hobby plans. To send emails from Railway, add a RESEND_API_KEY (over HTTPS port 443) or upgrade to Railway Pro.");
+              console.error("💡 [Railway SMTP Notice] Connection timed out! Railway blocks outbound SMTP ports 25, 465, and 587 on Free & Hobby plans. Use Google Gmail REST API (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN) over HTTPS port 443 or upgrade to Railway Pro.");
             } else if (err.message.includes("535") || err.message.includes("Username and Password not accepted")) {
               console.error("💡 [Gmail Auth Notice] Authentication failed (535). Ensure 2-Step Verification is active, generate a 16-character App Password, and verify there are no quotes or extra spaces in your Railway environment variables.");
             }
@@ -85,80 +80,6 @@ export class EmailService {
     } catch (err) {
       console.error("Failed to initialize SMTP transporter:", err);
       this.transporter = null;
-    }
-  }
-
-  /**
-   * Sends an outbound email using Resend's HTTPS REST API (Port 443).
-   * Works on any cloud platform without SMTP port restrictions.
-   */
-  private async sendWithResend(options: {
-    to: string;
-    fromHeader: string;
-    subject: string;
-    body: string;
-    inReplyToMessageId?: string | null;
-  }): Promise<SendEmailResult> {
-    try {
-      const headers: Record<string, string> = {};
-      if (options.inReplyToMessageId) {
-        headers["In-Reply-To"] = options.inReplyToMessageId;
-        headers["References"] = options.inReplyToMessageId;
-      }
-
-      // Resend does NOT permit sending from public webmail domains (e.g. @gmail.com).
-      // If a custom domain is configured in RESEND_FROM (e.g. support@yourcompany.com), use it;
-      // otherwise, default to Resend's allowed sandbox address "HelpDesk Support <onboarding@resend.dev>".
-      let from = env.RESEND_FROM;
-      if (
-        !from ||
-        from.includes("@gmail.com") ||
-        from.includes("@yahoo.com") ||
-        from.includes("@outlook.com") ||
-        from.includes("@hotmail.com")
-      ) {
-        from = "HelpDesk Support <onboarding@resend.dev>";
-      }
-
-      const replyTo = env.SUPPORT_EMAIL || env.SMTP_USER;
-
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from,
-          to: [options.to],
-          subject: options.subject,
-          text: options.body,
-          reply_to: replyTo || undefined,
-          headers: Object.keys(headers).length > 0 ? headers : undefined,
-        }),
-      });
-
-      const data = (await response.json()) as any;
-
-      if (!response.ok) {
-        console.error("❌ [Resend API Error]:", data);
-        return {
-          success: false,
-          error: data.message || `Resend request failed with status ${response.status}`,
-        };
-      }
-
-      console.log(`✅ [Email Sent via Resend] Delivered reply to ${options.to} (Message ID: ${data.id})`);
-      return {
-        success: true,
-        messageId: data.id,
-      };
-    } catch (error: any) {
-      console.error(`❌ [Resend Delivery Failed] Error sending to ${options.to}:`, error);
-      return {
-        success: false,
-        error: error.message || "Failed to send email via Resend API",
-      };
     }
   }
 
@@ -291,17 +212,6 @@ export class EmailService {
         to,
         fromAddress: senderAddress,
         fromName: agentName || "Helpdesk Support",
-        subject: replySubject,
-        body: formattedBody,
-        inReplyToMessageId,
-      });
-    }
-
-    // 2. If RESEND_API_KEY is configured, use Resend HTTPS API (Port 443)
-    if (env.RESEND_API_KEY) {
-      return this.sendWithResend({
-        to,
-        fromHeader,
         subject: replySubject,
         body: formattedBody,
         inReplyToMessageId,

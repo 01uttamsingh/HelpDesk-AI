@@ -107,8 +107,6 @@ const envSchema = z.object({
     .transform((val) => val === true || val === "true"),
   SMTP_USER: z.preprocess(cleanEnvString, z.string().optional()),
   SMTP_PASS: z.preprocess(cleanEnvString, z.string().optional()),
-  RESEND_API_KEY: z.preprocess(cleanEnvString, z.string().optional()),
-  RESEND_FROM: z.preprocess(cleanEnvString, z.string().optional()),
   GMAIL_CLIENT_ID: z.preprocess(cleanEnvString, z.string().optional()),
   GMAIL_CLIENT_SECRET: z.preprocess(cleanEnvString, z.string().optional()),
   GMAIL_REFRESH_TOKEN: z.preprocess(cleanEnvString, z.string().optional()),
