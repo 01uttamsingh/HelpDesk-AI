@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.0",
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=20.0.0"
+  },
   "workspaces": [
     "server",
     "client"
@@ -11,7 +16,7 @@
     "dev": "bun --filter \"*\" dev",
     "dev:server": "bun run --cwd server dev",
     "dev:client": "bun run --cwd client dev",
-    "build": "bun run build:client && bun run build:server",
+    "build": "bun --cwd server prisma:generate && bun run build:client && bun run build:server",
     "build:server": "bun run --cwd server build",
     "build:client": "bun run --cwd client build",
     "start": "bun run --cwd server start:prod",
