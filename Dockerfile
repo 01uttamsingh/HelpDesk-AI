@@ -18,12 +18,12 @@ FROM base AS builder
 WORKDIR /app
 
 # Copy root lockfile and package.json files for optimal layer caching
-COPY package.json bun.lock ./
+COPY package.json bun.lock* ./
 COPY server/package.json ./server/
 COPY client/package.json ./client/
 
 # Install all workspace dependencies
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile || bun install
 
 # Copy full monorepo source code
 COPY . .
@@ -47,7 +47,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy root workspace and server manifests
-COPY package.json bun.lock tsconfig.json ./
+COPY package.json bun.lock* tsconfig.json ./
 COPY server/package.json server/tsconfig.json ./server/
 COPY server/prisma ./server/prisma
 COPY server/prisma.config.ts ./server/
