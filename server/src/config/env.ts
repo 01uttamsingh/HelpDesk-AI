@@ -47,6 +47,19 @@ const envSchema = z.object({
   TRUSTED_ORIGINS: z.string().optional(),
   SUPPORT_EMAIL: z.string().email().default("support@helpdesk.local"),
   OPENAI_API_KEY: z.string().optional(),
+  SMTP_HOST: z.string().optional().default("smtp.gmail.com"),
+  SMTP_PORT: z
+    .string()
+    .optional()
+    .default("465")
+    .transform((val) => parseInt(val, 10)),
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .default("true")
+    .transform((val) => val === "true"),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

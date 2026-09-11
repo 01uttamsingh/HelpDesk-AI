@@ -9,12 +9,12 @@ import type {
 
 export interface InboundEmailPayload {
   from: string;
-  to?: string;
-  subject?: string;
-  text?: string;
-  body?: string;
-  html?: string;
-  messageId?: string;
+  to?: string | null;
+  subject?: string | null;
+  text?: string | null;
+  body?: string | null;
+  html?: string | null;
+  messageId?: string | null;
   category?: TicketCategory | null;
 }
 

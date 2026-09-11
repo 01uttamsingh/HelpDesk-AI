@@ -76,12 +76,12 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-3 sm:px-6 lg:px-8">
         {/* Left Section: Menu Toggle + Brand Logo + Desktop Nav */}
         <div className="flex items-center gap-2 sm:gap-6">
-          {/* Menu Drawer Toggle Button (accessible on all screen sizes) */}
+          {/* Menu Drawer Toggle Button (mobile only, hidden on md+) */}
           {user && (
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
+              className="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors cursor-pointer"
               aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={isMobileMenuOpen}
               data-testid="navbar-mobile-toggle"

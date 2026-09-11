@@ -14,6 +14,8 @@ import { ticketClassificationService } from "./ticket-classification.service";
 import { ticketAutoResolveService } from "./ticket-auto-resolve.service";
 import { ticketService, TicketServiceError } from "./ticket.service";
 import type { AuthenticatedRequest } from "../auth";
+import { emailService } from "../email/email.service";
+import prisma from "../../prisma";
 
 export class TicketController {
   /**
@@ -22,7 +24,22 @@ export class TicketController {
    */
   async handleInboundEmail(req: Request, res: Response): Promise<IngestInboundEmailResult | null> {
     try {
-      const validatedPayload = inboundEmailSchema.parse(req.body);
+      const raw = req.body || {};
+      const normalizedPayload = {
+        from: raw.from || raw.headers?.from || raw.envelope?.from,
+        to: raw.to || raw.headers?.to || raw.envelope?.to,
+        subject: raw.subject || raw.headers?.subject,
+        text:
+          raw.text ||
+          raw.body ||
+          raw.plain ||
+          (raw.html ? raw.html.replace(/<[^>]+>/g, " ").trim() : " "),
+        html: raw.html,
+        messageId: raw.messageId || raw.headers?.message_id || raw.headers?.["message-id"],
+        category: raw.category,
+      };
+
+      const validatedPayload = inboundEmailSchema.parse(normalizedPayload);
       const ticket = await ticketIngestService.ingestInboundEmail(validatedPayload);
 
       res.status(201).json({
@@ -307,6 +324,33 @@ export class TicketController {
         success: true,
         data: reply,
       });
+
+      // Asynchronously dispatch outbound reply email to the customer
+      prisma.ticket
+        .findUnique({
+          where: { id: parsedParams.data.id },
+          select: { id: true, senderEmail: true, senderName: true, subject: true, messageId: true },
+        })
+        .then((ticket) => {
+          if (ticket?.senderEmail) {
+            emailService
+              .sendTicketReplyEmail({
+                to: ticket.senderEmail,
+                customerName: ticket.senderName,
+                ticketId: ticket.id,
+                subject: ticket.subject,
+                replyText: parsedBody.data.body,
+                agentName: req.user?.name || "Support Agent",
+                inReplyToMessageId: ticket.messageId,
+              })
+              .catch((err) => {
+                console.error("Failed to send outbound email reply:", err);
+              });
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to lookup ticket for email reply:", err);
+        });
     } catch (error: any) {
       if (error instanceof TicketServiceError) {
         res.status(error.statusCode).json({

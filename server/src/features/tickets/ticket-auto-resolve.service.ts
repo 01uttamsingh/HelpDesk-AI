@@ -12,6 +12,7 @@ import {
   formatReplyText,
 } from "./ticket.utils";
 import { getOrCreateAiAgent } from "./ai-agent.utils";
+import { emailService } from "../email/email.service";
 import { z } from "zod";
 
 export const HELPDESK_SUPPORT_TEAM = "HelpDesk Support Team";
@@ -258,6 +259,23 @@ ${ticket.body}`;
             },
           }),
         ]);
+
+        // Asynchronously dispatch auto-resolve reply email to the customer
+        if (ticket.senderEmail) {
+          emailService
+            .sendTicketReplyEmail({
+              to: ticket.senderEmail,
+              customerName: ticket.senderName,
+              ticketId: ticket.id,
+              subject: ticket.subject,
+              replyText: finalReply,
+              agentName: HELPDESK_SUPPORT_TEAM,
+              inReplyToMessageId: ticket.messageId,
+            })
+            .catch((err) => {
+              console.error("Failed to send AI auto-resolve email:", err);
+            });
+        }
 
         return {
           ticket: updatedTicket,

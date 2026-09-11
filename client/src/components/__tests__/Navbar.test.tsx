@@ -109,8 +109,8 @@ describe("Navbar Navigation Highlighting", () => {
 
     // Click hamburger button to open menu
     const mobileToggle = screen.getByTestId("navbar-mobile-toggle");
-    // Ensure toggle is not restricted by md:hidden
-    expect(mobileToggle.className).not.toContain("md:hidden");
+    // Toggle should be hidden on desktop/laptop screens (md:hidden)
+    expect(mobileToggle.className).toContain("md:hidden");
     await user.click(mobileToggle);
 
     expect(screen.getByTestId("navbar-mobile-menu")).toBeInTheDocument();

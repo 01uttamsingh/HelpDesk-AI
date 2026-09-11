@@ -39,26 +39,32 @@ export const inboundEmailSchema = z
     to: z
       .string()
       .max(320, "Recipient 'to' address cannot exceed 320 characters")
+      .nullable()
       .optional(),
     subject: z
       .string()
       .max(255, "Subject cannot exceed 255 characters")
+      .nullable()
       .optional(),
     text: z
       .string()
       .max(10000, "Email text cannot exceed 10,000 characters")
+      .nullable()
       .optional(),
     body: z
       .string()
       .max(10000, "Email body cannot exceed 10,000 characters")
+      .nullable()
       .optional(),
     html: z
       .string()
       .max(50000, "Email HTML cannot exceed 50,000 characters")
+      .nullable()
       .optional(),
     messageId: z
       .string()
       .max(255, "Message ID cannot exceed 255 characters")
+      .nullable()
       .optional(),
     category: ticketCategorySchema,
   })
