@@ -113,6 +113,8 @@ export class EmailService {
         from = "HelpDesk Support <onboarding@resend.dev>";
       }
 
+      const replyTo = env.SUPPORT_EMAIL || env.SMTP_USER;
+
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -124,6 +126,7 @@ export class EmailService {
           to: [options.to],
           subject: options.subject,
           text: options.body,
+          reply_to: replyTo || undefined,
           headers: Object.keys(headers).length > 0 ? headers : undefined,
         }),
       });
