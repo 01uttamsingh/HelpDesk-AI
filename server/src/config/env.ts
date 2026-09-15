@@ -166,6 +166,9 @@ export function getTrustedOrigins(): string[] {
     }
   }
 
+  // Automatically trust Vercel deployments (production domain and preview deployments)
+  origins.add("https://*.vercel.app");
+
   if (env.TRUSTED_ORIGINS) {
     env.TRUSTED_ORIGINS.split(",")
       .map((origin) => origin.trim().replace(/\/+$/, ""))
@@ -174,4 +177,29 @@ export function getTrustedOrigins(): string[] {
   }
 
   return Array.from(origins);
+}
+
+/**
+ * Checks whether an origin is allowed by comparing against trusted origins,
+ * supporting exact matches and wildcard patterns (e.g., https://*.vercel.app).
+ */
+export function isOriginAllowed(origin: string, trustedOrigins: string[]): boolean {
+  const normalizedOrigin = origin.trim().replace(/\/+$/, "").toLowerCase();
+
+  return trustedOrigins.some((trusted) => {
+    const normalizedTrusted = trusted.trim().replace(/\/+$/, "").toLowerCase();
+    if (normalizedTrusted === normalizedOrigin) {
+      return true;
+    }
+    if (normalizedTrusted.includes("*")) {
+      const regexPattern =
+        "^" +
+        normalizedTrusted
+          .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+          .replace(/\*/g, ".*") +
+        "$";
+      return new RegExp(regexPattern).test(normalizedOrigin);
+    }
+    return false;
+  });
 }

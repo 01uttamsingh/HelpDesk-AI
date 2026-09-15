@@ -6,7 +6,7 @@ import rateLimit from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth, requireAuth, AuthenticatedRequest } from "./features/auth";
 import prisma from "./prisma";
-import { env, getTrustedOrigins } from "./config/env";
+import { env, getTrustedOrigins, isOriginAllowed } from "./config/env";
 import adminRoutes from "./routes/admin.routes";
 import { userRoutes } from "./features/users";
 import { webhookRoutes, ticketRoutes } from "./features/tickets";
@@ -44,9 +44,10 @@ app.use(
       if (!origin) {
         return callback(null, true);
       }
-      if (trustedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin, trustedOrigins)) {
         return callback(null, true);
       }
+      console.warn(`[CORS] Blocked request from origin: "${origin}". Allowed:`, trustedOrigins);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
