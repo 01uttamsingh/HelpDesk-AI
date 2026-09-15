@@ -43,7 +43,7 @@ Use any of the pre-seeded credentials below to test the platform:
 - **Frontend**: React 19, Vite, Tailwind CSS v4, TanStack Query v5, TanStack Table, Lucide Icons, Recharts
 - **Backend**: Express 4, TypeScript, Prisma ORM 7, Better Auth 1.7, pg-boss
 - **Database**: PostgreSQL 16+
-- **AI Engine**: OpenAI API (`gpt-4o-mini` / `gpt-4o`) via AI SDK
+- **AI Engine**: OpenAI API (`gpt-5.6-luna`) via Vercel AI SDK (`ai`, `@ai-sdk/openai`) for ticket classification, conversation summarization, reply polishing, and autonomous resolution
 - **Testing**: Playwright (E2E), Vitest & React Testing Library (Unit/Component)
 - **Deployment & Cloud**: Vercel (Frontend SPA), Render / Railway (Backend API & PostgreSQL), Docker
 - **Monitoring**: Sentry (Frontend & Backend Error Tracking)
