@@ -17,7 +17,7 @@
 - **Prisma**: Type-safe database access, easy migrations, works seamlessly with TypeScript.
 
 ## AI
-- **Google Gemini API**: Used for ticket classification, summaries, autonomous replies, and text embeddings; fast inference, strong structured JSON outputs, and large context handling.
+- **OpenAI (`gpt-5.6-luna`) via Vercel AI SDK (`ai`, `@ai-sdk/openai`)**: Used for ticket classification, conversation summarization, autonomous replies, and draft reply polishing with structured JSON outputs.
 
 ## Email
 - **SendGrid or Mailgun**: Inbound emails handled via webhooks, outbound replies sent via email API.
