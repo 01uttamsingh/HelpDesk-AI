@@ -6,10 +6,12 @@ An intelligent, full-stack enterprise Helpdesk platform powered by **Bun**, **Ex
 
 ## 🌐 Live Demo & Deployment
 
-| Resource | URL |
-| :--- | :--- |
-| **Production App** | [https://helpdesk-ai-production-170e.up.railway.app](https://helpdesk-ai-production-170e.up.railway.app) |
-| **API Healthcheck** | [https://helpdesk-ai-production-170e.up.railway.app/api/health](https://helpdesk-ai-production-170e.up.railway.app/api/health) |
+| Resource | Service | URL |
+| :--- | :--- | :--- |
+| **Frontend Web App** | **Vercel** | [https://helpdesk-ai-client.vercel.app](https://helpdesk-ai-client.vercel.app) |
+| **Backend API** | **Render** | [https://helpdesk-ai-907n.onrender.com](https://helpdesk-ai-907n.onrender.com) |
+| **API Healthcheck** | **Render** | [https://helpdesk-ai-907n.onrender.com/api/health](https://helpdesk-ai-907n.onrender.com/api/health) |
+| **Alternative Deployment** | **Railway** | [https://helpdesk-ai-production-170e.up.railway.app](https://helpdesk-ai-production-170e.up.railway.app) |
 
 ### 🔐 Demo Credentials
 
@@ -20,8 +22,6 @@ Use any of the pre-seeded credentials below to test the platform:
 | **Administrator** | `admin@example.com` | `uvdb1357` | Full system access, agent management, analytics & settings |
 | **Support Agent** | `agent@example.com` | `uvdb1357` | Ticket triage, replying, assignment, and status updates |
 | **AI Agent** | `ai@example.com` | `uvdb1357` | Autonomous AI responder account |
-
-> **Note on DNS**: If your local network or ISP blocks newly created Railway subdomains (`DNS_PROBE_FINISHED_NXDOMAIN`), enable **Secure DNS** (Cloudflare `1.1.1.1` or Google `8.8.8.8`) in Chrome/Edge settings or test via mobile data.
 
 ---
 
@@ -45,7 +45,8 @@ Use any of the pre-seeded credentials below to test the platform:
 - **Database**: PostgreSQL 16+
 - **AI Engine**: OpenAI API (`gpt-4o-mini` / `gpt-4o`) via AI SDK
 - **Testing**: Playwright (E2E), Vitest & React Testing Library (Unit/Component)
-- **Monitoring & CI/CD**: Sentry, Railway, Docker
+- **Deployment & Cloud**: Vercel (Frontend SPA), Render / Railway (Backend API & PostgreSQL), Docker
+- **Monitoring**: Sentry (Frontend & Backend Error Tracking)
 
 ---
 
@@ -213,6 +214,7 @@ bun test:e2e:headed
 │   │   ├── hooks/              # Custom React Query & UI hooks
 │   │   ├── lib/                # API client & Better Auth client
 │   │   └── index.css           # Tailwind CSS v4 styling
+│   ├── vercel.json             # Vercel SPA routing & API reverse proxy
 │   ├── vite.config.ts          # Vite bundler configuration
 │   └── package.json
 ├── server/                     # Express + Bun TypeScript backend API
@@ -228,7 +230,9 @@ bun test:e2e:headed
 │   └── package.json
 ├── e2e/                        # Playwright automated test suite
 ├── Dockerfile                  # Multi-stage production container build
+├── render.yaml                 # Render blueprint deployment configuration
 ├── railway.toml                # Railway deployment configuration
+├── vercel.json                 # Root Vercel monorepo deployment config
 ├── start.sh                    # Container boot, migration & seed runner
 ├── docker-compose.yml          # Local PostgreSQL services
 └── package.json                # Root Bun workspace configuration
