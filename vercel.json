@@ -1,0 +1,15 @@
+{
+  "framework": "vite",
+  "buildCommand": "bun run --cwd client build",
+  "outputDirectory": "client/dist",
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "https://helpdesk-ai-907n.onrender.com/api/:match*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

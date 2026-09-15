@@ -39,9 +39,12 @@ export function cleanEnvString(val: unknown): string | undefined {
   return stripped || undefined;
 }
 
-// Support Railway deployment public domain detection
-const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
-const defaultPublicUrl = railwayDomain ? sanitizeUrl(railwayDomain) : undefined;
+// Support Railway and Render deployment public domain detection
+const platformDomain =
+  process.env.RENDER_EXTERNAL_URL ||
+  process.env.RAILWAY_PUBLIC_DOMAIN ||
+  process.env.RAILWAY_STATIC_URL;
+const defaultPublicUrl = platformDomain ? sanitizeUrl(platformDomain) : undefined;
 
 const envSchema = z.object({
   PORT: z
@@ -152,6 +155,14 @@ export function getTrustedOrigins(): string[] {
     const railwayUrl = sanitizeUrl(activeRailwayDomain);
     if (railwayUrl) {
       origins.add(railwayUrl);
+    }
+  }
+
+  const renderDomain = process.env.RENDER_EXTERNAL_URL;
+  if (renderDomain) {
+    const renderUrl = sanitizeUrl(renderDomain);
+    if (renderUrl) {
+      origins.add(renderUrl);
     }
   }
 
